@@ -8,7 +8,7 @@ const Login = () => {
   const { login } = useAuth();
 
   const [formData, setFormData] = useState({
-    phone: '',
+    identifier: '',
     password: '',
   });
 
@@ -16,7 +16,7 @@ const Login = () => {
   const [apiError, setApiError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const { phone, password } = formData;
+  const { identifier, password } = formData;
 
   // Handle input changes
   const handleChange = (e) => {
@@ -38,11 +38,19 @@ const Login = () => {
   const validateForm = () => {
     const newErrors = {};
 
-    // Phone validation
-    if (!phone.trim()) {
-      newErrors.phone = 'Phone is required';
-    } else if (!/^\d{10,15}$/.test(phone)) {
-      newErrors.phone = 'Phone must be 10-15 digits';
+    // Identifier validation (email or phone)
+    if (!identifier.trim()) {
+      newErrors.identifier = 'Email or phone is required';
+    } else if (identifier.includes('@')) {
+      // Validate as email
+      if (!/^\S+@\S+\.\S+$/.test(identifier)) {
+        newErrors.identifier = 'Please provide a valid email address';
+      }
+    } else {
+      // Validate as phone
+      if (!/^\d{10,15}$/.test(identifier)) {
+        newErrors.identifier = 'Phone must be 10-15 digits';
+      }
     }
 
     // Password validation
@@ -69,7 +77,7 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const result = await login(phone, password);
+      const result = await login(identifier, password);
 
       if (result.success) {
         // Redirect to dashboard on successful login
@@ -99,20 +107,20 @@ const Login = () => {
 
         <form onSubmit={handleSubmit} className="login-form" noValidate>
           <div className="form-group">
-            <label htmlFor="phone">Phone</label>
+            <label htmlFor="identifier">Email or Phone</label>
             <input
-              type="tel"
-              id="phone"
-              name="phone"
-              value={phone}
+              type="text"
+              id="identifier"
+              name="identifier"
+              value={identifier}
               onChange={handleChange}
-              className={errors.phone ? 'input-error' : ''}
-              placeholder="Enter your phone (10-15 digits)"
+              className={errors.identifier ? 'input-error' : ''}
+              placeholder="Enter email or phone number"
               disabled={loading}
-              autoComplete="tel"
+              autoComplete="username"
             />
-            {errors.phone && (
-              <span className="error-message field-error">{errors.phone}</span>
+            {errors.identifier && (
+              <span className="error-message field-error">{errors.identifier}</span>
             )}
           </div>
 

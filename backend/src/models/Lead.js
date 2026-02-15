@@ -1,6 +1,11 @@
 const mongoose = require('mongoose');
 
 const leadSchema = new mongoose.Schema({
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: [true, 'User is required']
+  },
   date: {
     type: Date,
     default: Date.now

@@ -63,7 +63,7 @@ const register = async (req, res, next) => {
     // Validate request body using express-validator results
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({
+      return res.status(409).json({
         success: false,
         message: 'Validation failed',
         errors: errors.array().map(err => err.msg),
@@ -71,22 +71,42 @@ const register = async (req, res, next) => {
       });
     }
 
-    const { name, phone, password, role } = req.body;
+    const { name, phone, email, password, role } = req.body;
 
     // Check if user with phone already exists
-    const existingUser = await User.findOne({ phone });
-    if (existingUser) {
+    const existingUserByPhone = await User.findOne({ 
+      'phone.countryCode': phone.countryCode,
+      'phone.number': phone.number
+    });
+    
+    if (existingUserByPhone) {
       return res.status(409).json({
         success: false,
-        message: 'User with this phone already exists',
+        message: 'User with this phone number already exists',
         statusCode: 409
       });
+    }
+
+    // Check if email is provided and already exists
+    if (email) {
+      const existingUserByEmail = await User.findOne({ email });
+      if (existingUserByEmail) {
+        return res.status(409).json({
+          success: false,
+          message: 'User with this email already exists',
+          statusCode: 409
+        });
+      }
     }
 
     // Create new user (password will be hashed by pre-save hook)
     const user = new User({
       name,
-      phone,
+      phone: {
+        countryCode: phone.countryCode || '+91',
+        number: phone.number
+      },
+      email: email || undefined, // Only set if provided
       password,
       role
     });
@@ -101,6 +121,7 @@ const register = async (req, res, next) => {
         _id: user._id,
         name: user.name,
         phone: user.phone,
+        email: user.email,
         role: user.role,
         createdAt: user.createdAt
       }
@@ -169,10 +190,19 @@ const login = async (req, res, next) => {
       });
     }
 
-    const { phone, password } = req.body;
+    const { identifier, password } = req.body;
 
-    // Find user by phone
-    const user = await User.findOne({ phone });
+    // Detect if identifier is email (contains @) or phone
+    let user;
+    if (identifier.includes('@')) {
+      // Login with email
+      user = await User.findOne({ email: identifier });
+    } else {
+      // Login with phone - extract only digits
+      const phoneDigits = identifier.replace(/\D/g, '');
+      user = await User.findOne({ 'phone.number': phoneDigits });
+    }
+
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -191,10 +221,11 @@ const login = async (req, res, next) => {
       });
     }
 
-    // Generate JWT token with payload: userId, phone, role
+    // Generate JWT token with payload: userId, phone, email, role
     const payload = {
       userId: user._id,
       phone: user.phone,
+      email: user.email,
       role: user.role
     };
 
@@ -212,6 +243,7 @@ const login = async (req, res, next) => {
         _id: user._id,
         name: user.name,
         phone: user.phone,
+        email: user.email,
         role: user.role
       }
     });
@@ -288,6 +320,7 @@ const getProfile = async (req, res, next) => {
         _id: user._id,
         name: user.name,
         phone: user.phone,
+        email: user.email,
         role: user.role,
         createdAt: user.createdAt
       }

@@ -50,7 +50,7 @@ const rejectSQLInjection = (value) => {
 
 /**
  * Validation schema for user registration
- * Validates: name, phone, password, role
+ * Validates: name, phone (countryCode + number), email (optional), password, role
  * Includes sanitization for XSS and SQL injection protection
  */
 const registerValidation = [
@@ -63,12 +63,27 @@ const registerValidation = [
     .custom(rejectSQLInjection)
     .customSanitizer(sanitizeInput),
 
-  body('phone')
+  body('phone.countryCode')
     .trim()
     .notEmpty()
-    .withMessage('Phone is required')
+    .withMessage('Country code is required')
+    .matches(/^\+\d{1,4}$/)
+    .withMessage('Country code must start with + and contain 1-4 digits'),
+
+  body('phone.number')
+    .trim()
+    .notEmpty()
+    .withMessage('Phone number is required')
     .matches(/^\d{10,15}$/)
-    .withMessage('Phone must be 10-15 digits')
+    .withMessage('Phone number must be 10-15 digits')
+    .custom(rejectSQLInjection),
+
+  body('email')
+    .optional({ checkFalsy: true })
+    .trim()
+    .isEmail()
+    .withMessage('Please provide a valid email address')
+    .normalizeEmail()
     .custom(rejectSQLInjection),
 
   body('password')
@@ -87,16 +102,14 @@ const registerValidation = [
 
 /**
  * Validation schema for user login
- * Validates: phone, password
+ * Validates: identifier (email or phone), password
  * Includes sanitization for XSS and SQL injection protection
  */
 const loginValidation = [
-  body('phone')
+  body('identifier')
     .trim()
     .notEmpty()
-    .withMessage('Phone is required')
-    .matches(/^\d{10,15}$/)
-    .withMessage('Phone must be 10-15 digits')
+    .withMessage('Email or phone number is required')
     .custom(rejectSQLInjection),
 
   body('password')

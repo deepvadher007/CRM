@@ -9,7 +9,9 @@ const Register = () => {
 
   const [formData, setFormData] = useState({
     name: '',
+    countryCode: '+91',
     phone: '',
+    email: '',
     password: '',
     role: 'Agent',
   });
@@ -18,7 +20,7 @@ const Register = () => {
   const [apiError, setApiError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const { name, phone, password, role } = formData;
+  const { name, countryCode, phone, email, password, role } = formData;
 
   // Handle input changes
   const handleChange = (e) => {
@@ -45,11 +47,21 @@ const Register = () => {
       newErrors.name = 'Name is required';
     }
 
+    // Country code validation
+    if (!countryCode) {
+      newErrors.countryCode = 'Country code is required';
+    }
+
     // Phone validation
     if (!phone.trim()) {
       newErrors.phone = 'Phone is required';
     } else if (!/^\d{10,15}$/.test(phone)) {
       newErrors.phone = 'Phone must be 10-15 digits';
+    }
+
+    // Email validation (optional)
+    if (email && !/^\S+@\S+\.\S+$/.test(email)) {
+      newErrors.email = 'Please provide a valid email address';
     }
 
     // Password validation
@@ -83,7 +95,13 @@ const Register = () => {
     setLoading(true);
 
     try {
-      const result = await register({ name, phone, password, role });
+      const result = await register({ 
+        name, 
+        phone: { countryCode, number: phone },
+        email: email || undefined,
+        password, 
+        role 
+      });
 
       if (result.success) {
         // Redirect to login on successful registration
@@ -133,7 +151,28 @@ const Register = () => {
           </div>
 
           <div className="form-group">
-            <label htmlFor="phone">Phone</label>
+            <label htmlFor="countryCode">Country Code</label>
+            <select
+              id="countryCode"
+              name="countryCode"
+              value={countryCode}
+              onChange={handleChange}
+              className={errors.countryCode ? 'input-error' : ''}
+              disabled={loading}
+            >
+              <option value="+91">+91 (India)</option>
+              <option value="+1">+1 (USA/Canada)</option>
+              <option value="+44">+44 (UK)</option>
+              <option value="+61">+61 (Australia)</option>
+              <option value="+971">+971 (UAE)</option>
+            </select>
+            {errors.countryCode && (
+              <span className="error-message field-error">{errors.countryCode}</span>
+            )}
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="phone">Phone Number</label>
             <input
               type="tel"
               id="phone"
@@ -141,12 +180,30 @@ const Register = () => {
               value={phone}
               onChange={handleChange}
               className={errors.phone ? 'input-error' : ''}
-              placeholder="Enter your phone (10-15 digits)"
+              placeholder="Enter phone number (10-15 digits)"
               disabled={loading}
               autoComplete="tel"
             />
             {errors.phone && (
               <span className="error-message field-error">{errors.phone}</span>
+            )}
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="email">Email (Optional)</label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              value={email}
+              onChange={handleChange}
+              className={errors.email ? 'input-error' : ''}
+              placeholder="Enter your email (optional)"
+              disabled={loading}
+              autoComplete="email"
+            />
+            {errors.email && (
+              <span className="error-message field-error">{errors.email}</span>
             )}
           </div>
 

@@ -19,6 +19,7 @@ const createLead = async (req, res, next) => {
     const { date, name, number, remark, status, followUpDate } = req.body;
 
     const lead = new Lead({
+      user: req.user.userId, // Automatically assign logged-in user
       date: date || Date.now(),
       name,
       number,
@@ -40,11 +41,12 @@ const createLead = async (req, res, next) => {
 };
 
 /**
- * Get all leads
+ * Get all leads (filtered by logged-in user)
  */
 const getAllLeads = async (req, res, next) => {
   try {
-    const leads = await Lead.find().sort({ date: -1 });
+    // Only return leads belonging to the logged-in user
+    const leads = await Lead.find({ user: req.user.userId }).sort({ date: -1 });
 
     res.status(200).json({
       success: true,
@@ -57,7 +59,7 @@ const getAllLeads = async (req, res, next) => {
 };
 
 /**
- * Update a lead
+ * Update a lead (only if it belongs to logged-in user)
  */
 const updateLead = async (req, res, next) => {
   try {
@@ -74,19 +76,26 @@ const updateLead = async (req, res, next) => {
     const { id } = req.params;
     const { date, name, number, remark, status, followUpDate } = req.body;
 
-    const lead = await Lead.findByIdAndUpdate(
-      id,
-      { date, name, number, remark, status, followUpDate },
-      { new: true, runValidators: true }
-    );
+    // Find lead and verify it belongs to the logged-in user
+    const lead = await Lead.findOne({ _id: id, user: req.user.userId });
 
     if (!lead) {
       return res.status(404).json({
         success: false,
-        message: 'Lead not found',
+        message: 'Lead not found or you do not have permission to update it',
         statusCode: 404
       });
     }
+
+    // Update the lead
+    lead.date = date;
+    lead.name = name;
+    lead.number = number;
+    lead.remark = remark;
+    lead.status = status;
+    lead.followUpDate = followUpDate;
+
+    await lead.save();
 
     res.status(200).json({
       success: true,
@@ -99,18 +108,19 @@ const updateLead = async (req, res, next) => {
 };
 
 /**
- * Delete a lead
+ * Delete a lead (only if it belongs to logged-in user)
  */
 const deleteLead = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const lead = await Lead.findByIdAndDelete(id);
+    // Find and delete lead only if it belongs to the logged-in user
+    const lead = await Lead.findOneAndDelete({ _id: id, user: req.user.userId });
 
     if (!lead) {
       return res.status(404).json({
         success: false,
-        message: 'Lead not found',
+        message: 'Lead not found or you do not have permission to delete it',
         statusCode: 404
       });
     }
@@ -125,7 +135,7 @@ const deleteLead = async (req, res, next) => {
 };
 
 /**
- * Get today's follow-ups
+ * Get today's follow-ups (filtered by logged-in user)
  */
 const getTodayFollowUps = async (req, res, next) => {
   try {
@@ -135,7 +145,9 @@ const getTodayFollowUps = async (req, res, next) => {
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
+    // Filter by both user and today's date
     const leads = await Lead.find({
+      user: req.user.userId,
       followUpDate: {
         $gte: today,
         $lt: tomorrow

@@ -7,11 +7,24 @@ const userSchema = new mongoose.Schema({
     trim: true
   },
   phone: {
+    countryCode: {
+      type: String,
+      required: [true, 'Country code is required'],
+      default: '+91'
+    },
+    number: {
+      type: String,
+      required: [true, 'Phone number is required'],
+      trim: true,
+      match: [/^\d{10,15}$/, 'Phone number must be 10-15 digits']
+    }
+  },
+  email: {
     type: String,
-    required: [true, 'Phone is required'],
-    unique: true,
     trim: true,
-    match: [/^\d{10,15}$/, 'Phone must be 10-15 digits']
+    lowercase: true,
+    sparse: true, // Allows null/undefined but enforces uniqueness when present
+    match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email address']
   },
   password: {
     type: String,
@@ -32,8 +45,11 @@ const userSchema = new mongoose.Schema({
   }
 });
 
-// Create unique index on phone field
-userSchema.index({ phone: 1 }, { unique: true });
+// Create unique compound index on phone (countryCode + number)
+userSchema.index({ 'phone.countryCode': 1, 'phone.number': 1 }, { unique: true });
+
+// Create unique index on email (sparse allows null but enforces uniqueness when present)
+userSchema.index({ email: 1 }, { unique: true, sparse: true });
 
 // Pre-save hook to hash password before saving to database
 userSchema.pre('save', async function() {
