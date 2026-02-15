@@ -303,6 +303,32 @@
   }
 }
 
+@media (max-width: 600px) {
+  .navbar-auth-links {
+    flex-direction: column;
+    width: 100%;
+    gap: 12px;
+  }
+
+  .nav-link {
+    width: 100%;
+    text-align: center;
+    padding: 12px 16px;
+  }
+
+  .btn-register {
+    width: 100%;
+    display: block;
+    text-align: center;
+    padding: 12px 16px;
+  }
+
+  .btn-logout {
+    width: 100%;
+    padding: 12px 16px;
+  }
+}
+
 @media (max-width: 480px) {
   .navbar-container {
     height: 60px;
