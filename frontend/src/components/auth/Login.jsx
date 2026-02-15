@@ -8,7 +8,7 @@ const Login = () => {
   const { login } = useAuth();
 
   const [formData, setFormData] = useState({
-    email: '',
+    phone: '',
     password: '',
   });
 
@@ -16,7 +16,7 @@ const Login = () => {
   const [apiError, setApiError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const { email, password } = formData;
+  const { phone, password } = formData;
 
   // Handle input changes
   const handleChange = (e) => {
@@ -38,11 +38,11 @@ const Login = () => {
   const validateForm = () => {
     const newErrors = {};
 
-    // Email validation
-    if (!email.trim()) {
-      newErrors.email = 'Email is required';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      newErrors.email = 'Please enter a valid email address';
+    // Phone validation
+    if (!phone.trim()) {
+      newErrors.phone = 'Phone is required';
+    } else if (!/^\d{10,15}$/.test(phone)) {
+      newErrors.phone = 'Phone must be 10-15 digits';
     }
 
     // Password validation
@@ -69,7 +69,7 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const result = await login(email, password);
+      const result = await login(phone, password);
 
       if (result.success) {
         // Redirect to dashboard on successful login
@@ -99,20 +99,20 @@ const Login = () => {
 
         <form onSubmit={handleSubmit} className="login-form" noValidate>
           <div className="form-group">
-            <label htmlFor="email">Email</label>
+            <label htmlFor="phone">Phone</label>
             <input
-              type="email"
-              id="email"
-              name="email"
-              value={email}
+              type="tel"
+              id="phone"
+              name="phone"
+              value={phone}
               onChange={handleChange}
-              className={errors.email ? 'input-error' : ''}
-              placeholder="Enter your email"
+              className={errors.phone ? 'input-error' : ''}
+              placeholder="Enter your phone (10-15 digits)"
               disabled={loading}
-              autoComplete="email"
+              autoComplete="tel"
             />
-            {errors.email && (
-              <span className="error-message field-error">{errors.email}</span>
+            {errors.phone && (
+              <span className="error-message field-error">{errors.phone}</span>
             )}
           </div>
 

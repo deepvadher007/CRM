@@ -1,99 +1,343 @@
+import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import api from '../../services/api';
+import { extractErrorMessage } from '../../utils/errorHandler';
 import './Dashboard.css';
 
-/**
- * Dashboard component - Main dashboard view for authenticated users
- * Displays user information and placeholder sections for future CRM features
- */
 const Dashboard = () => {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
+  
+  // Lead form state
+  const [formData, setFormData] = useState({
+    date: new Date().toISOString().split('T')[0],
+    name: '',
+    number: '',
+    remark: '',
+    status: 'CNR',
+    followUpDate: ''
+  });
+  
+  // UI state
+  const [leads, setLeads] = useState([]);
+  const [todayFollowUps, setTodayFollowUps] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [editingId, setEditingId] = useState(null);
+
+  // Fetch all leads
+  const fetchLeads = async () => {
+    try {
+      const response = await api.get('/api/leads');
+      setLeads(response.data.leads || []);
+    } catch (err) {
+      console.error('Failed to fetch leads:', err);
+    }
+  };
+
+  // Fetch today's follow-ups
+  const fetchTodayFollowUps = async () => {
+    try {
+      const response = await api.get('/api/leads/today');
+      setTodayFollowUps(response.data.leads || []);
+    } catch (err) {
+      console.error('Failed to fetch today follow-ups:', err);
+    }
+  };
+
+  // Load data on mount
+  useEffect(() => {
+    fetchLeads();
+    fetchTodayFollowUps();
+  }, []);
+
+  // Handle form input changes
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+    if (error) setError('');
+    if (success) setSuccess('');
+  };
+
+  // Handle form submission (create or update)
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+
+    // Validation
+    if (!formData.name.trim() || !formData.number.trim()) {
+      setError('Name and Number are required');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      if (editingId) {
+        // Update existing lead
+        await api.put(`/api/leads/${editingId}`, formData);
+        setSuccess('Lead updated successfully');
+        setEditingId(null);
+      } else {
+        // Create new lead
+        await api.post('/api/leads', formData);
+        setSuccess('Lead created successfully');
+      }
+
+      // Reset form
+      setFormData({
+        date: new Date().toISOString().split('T')[0],
+        name: '',
+        number: '',
+        remark: '',
+        status: 'CNR',
+        followUpDate: ''
+      });
+
+      // Refresh data
+      fetchLeads();
+      fetchTodayFollowUps();
+    } catch (err) {
+      setError(extractErrorMessage(err, 'Failed to save lead'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle edit
+  const handleEdit = (lead) => {
+    setEditingId(lead._id);
+    setFormData({
+      date: lead.date ? new Date(lead.date).toISOString().split('T')[0] : '',
+      name: lead.name,
+      number: lead.number,
+      remark: lead.remark || '',
+      status: lead.status,
+      followUpDate: lead.followUpDate ? new Date(lead.followUpDate).toISOString().split('T')[0] : ''
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Handle delete
+  const handleDelete = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this lead?')) {
+      return;
+    }
+
+    try {
+      await api.delete(`/api/leads/${id}`);
+      setSuccess('Lead deleted successfully');
+      fetchLeads();
+      fetchTodayFollowUps();
+    } catch (err) {
+      setError(extractErrorMessage(err, 'Failed to delete lead'));
+    }
+  };
+
+  // Cancel edit
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setFormData({
+      date: new Date().toISOString().split('T')[0],
+      name: '',
+      number: '',
+      remark: '',
+      status: 'CNR',
+      followUpDate: ''
+    });
+  };
+
+  // Format date for display
+  const formatDate = (dateString) => {
+    if (!dateString) return '-';
+    return new Date(dateString).toLocaleDateString('en-IN');
+  };
 
   return (
     <div className="dashboard-container">
-      <div className="dashboard-content">
-        {/* Welcome Section */}
-        <div className="welcome-section">
-          <h1 className="welcome-title">Welcome back, {user?.name}! 👋</h1>
-          <p className="welcome-subtitle">Here's what's happening with your CRM today</p>
+      <div className="dashboard-header">
+        <h1>Hanuvansh CRM</h1>
+        <p>Welcome, {user?.name} ({user?.role})</p>
+      </div>
+
+      {/* Lead Entry Form */}
+      <div className="lead-form-section">
+        <h2>{editingId ? 'Edit Lead' : 'Add New Lead'}</h2>
+        
+        {error && <div className="alert alert-error">{error}</div>}
+        {success && <div className="alert alert-success">{success}</div>}
+
+        <form onSubmit={handleSubmit} className="lead-form">
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="date">Date</label>
+              <input
+                type="date"
+                id="date"
+                name="date"
+                value={formData.date}
+                onChange={handleChange}
+                disabled={loading}
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="name">Name *</label>
+              <input
+                type="text"
+                id="name"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                placeholder="Enter name"
+                disabled={loading}
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="number">Number *</label>
+              <input
+                type="text"
+                id="number"
+                name="number"
+                value={formData.number}
+                onChange={handleChange}
+                placeholder="Enter phone number"
+                disabled={loading}
+                required
+              />
+            </div>
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="status">Status</label>
+              <select
+                id="status"
+                name="status"
+                value={formData.status}
+                onChange={handleChange}
+                disabled={loading}
+              >
+                <option value="CNR">CNR</option>
+                <option value="FOLLOW_UP">Follow Up</option>
+                <option value="NOT_INTERESTED">Not Interested</option>
+                <option value="BOOKED">Booked</option>
+                <option value="INVALID_NO">Invalid No</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="followUpDate">Follow-up Date</label>
+              <input
+                type="date"
+                id="followUpDate"
+                name="followUpDate"
+                value={formData.followUpDate}
+                onChange={handleChange}
+                disabled={loading}
+              />
+            </div>
+
+            <div className="form-group form-group-full">
+              <label htmlFor="remark">Remark</label>
+              <input
+                type="text"
+                id="remark"
+                name="remark"
+                value={formData.remark}
+                onChange={handleChange}
+                placeholder="Enter remark"
+                disabled={loading}
+              />
+            </div>
+          </div>
+
+          <div className="form-actions">
+            <button type="submit" className="btn btn-primary" disabled={loading}>
+              {loading ? 'Saving...' : editingId ? 'Update Lead' : 'Add Lead'}
+            </button>
+            {editingId && (
+              <button type="button" className="btn btn-secondary" onClick={handleCancelEdit}>
+                Cancel
+              </button>
+            )}
+          </div>
+        </form>
+      </div>
+
+      {/* Today's Follow-ups */}
+      {todayFollowUps.length > 0 && (
+        <div className="today-followups-section">
+          <h2>Today's Follow-ups</h2>
+          <div className="followup-cards">
+            {todayFollowUps.map((lead) => (
+              <div key={lead._id} className="followup-card">
+                <div className="followup-info">
+                  <h3>{lead.name}</h3>
+                  <p>📞 {lead.number}</p>
+                  {lead.remark && <p className="remark">💬 {lead.remark}</p>}
+                </div>
+                <div className="followup-actions">
+                  <button className="btn-icon" onClick={() => handleEdit(lead)} title="Edit">
+                    ✏️
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
+      )}
 
-        {/* User Info Card */}
-        <div className="user-info-card">
-          <h2 className="card-title">Your Profile</h2>
-          <div className="info-grid">
-            <div className="info-item">
-              <span className="info-label">Name</span>
-              <span className="info-value">{user?.name}</span>
-            </div>
-            <div className="info-item">
-              <span className="info-label">Email</span>
-              <span className="info-value">{user?.email}</span>
-            </div>
-            <div className="info-item">
-              <span className="info-label">Role</span>
-              <span className="info-value role-badge">{user?.role}</span>
-            </div>
-          </div>
-          <button onClick={logout} className="btn-logout-dashboard">
-            Logout
-          </button>
-        </div>
-
-        {/* CRM Feature Placeholders */}
-        <div className="features-grid">
-          <div className="feature-card">
-            <div className="feature-icon">📊</div>
-            <h3 className="feature-title">Analytics</h3>
-            <p className="feature-description">
-              View your sales performance and key metrics
-            </p>
-            <span className="coming-soon">Coming Soon</span>
-          </div>
-
-          <div className="feature-card">
-            <div className="feature-icon">👥</div>
-            <h3 className="feature-title">Contacts</h3>
-            <p className="feature-description">
-              Manage your customer relationships and contacts
-            </p>
-            <span className="coming-soon">Coming Soon</span>
-          </div>
-
-          <div className="feature-card">
-            <div className="feature-icon">💼</div>
-            <h3 className="feature-title">Deals</h3>
-            <p className="feature-description">
-              Track your sales pipeline and close deals faster
-            </p>
-            <span className="coming-soon">Coming Soon</span>
-          </div>
-
-          <div className="feature-card">
-            <div className="feature-icon">📅</div>
-            <h3 className="feature-title">Calendar</h3>
-            <p className="feature-description">
-              Schedule meetings and manage your appointments
-            </p>
-            <span className="coming-soon">Coming Soon</span>
-          </div>
-
-          <div className="feature-card">
-            <div className="feature-icon">📧</div>
-            <h3 className="feature-title">Email</h3>
-            <p className="feature-description">
-              Send and track email campaigns to your contacts
-            </p>
-            <span className="coming-soon">Coming Soon</span>
-          </div>
-
-          <div className="feature-card">
-            <div className="feature-icon">📈</div>
-            <h3 className="feature-title">Reports</h3>
-            <p className="feature-description">
-              Generate detailed reports and insights
-            </p>
-            <span className="coming-soon">Coming Soon</span>
-          </div>
+      {/* All Leads Table */}
+      <div className="leads-table-section">
+        <h2>All Leads ({leads.length})</h2>
+        <div className="table-container">
+          <table className="leads-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Name</th>
+                <th>Number</th>
+                <th>Status</th>
+                <th>Follow-up</th>
+                <th>Remark</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {leads.length === 0 ? (
+                <tr>
+                  <td colSpan="7" className="no-data">No leads found. Add your first lead above!</td>
+                </tr>
+              ) : (
+                leads.map((lead) => (
+                  <tr key={lead._id}>
+                    <td>{formatDate(lead.date)}</td>
+                    <td>{lead.name}</td>
+                    <td>{lead.number}</td>
+                    <td>
+                      <span className={`status-badge status-${lead.status.toLowerCase()}`}>
+                        {lead.status.replace('_', ' ')}
+                      </span>
+                    </td>
+                    <td>{formatDate(lead.followUpDate)}</td>
+                    <td className="remark-cell">{lead.remark || '-'}</td>
+                    <td className="actions-cell">
+                      <button className="btn-icon" onClick={() => handleEdit(lead)} title="Edit">
+                        ✏️
+                      </button>
+                      <button className="btn-icon btn-delete" onClick={() => handleDelete(lead._id)} title="Delete">
+                        🗑️
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

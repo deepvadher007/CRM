@@ -1,0 +1,41 @@
+const mongoose = require('mongoose');
+
+const leadSchema = new mongoose.Schema({
+  date: {
+    type: Date,
+    default: Date.now
+  },
+  name: {
+    type: String,
+    required: [true, 'Name is required'],
+    trim: true
+  },
+  number: {
+    type: String,
+    required: [true, 'Number is required'],
+    trim: true
+  },
+  remark: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  status: {
+    type: String,
+    enum: {
+      values: ['CNR', 'FOLLOW_UP', 'NOT_INTERESTED', 'BOOKED', 'INVALID_NO'],
+      message: '{VALUE} is not a valid status'
+    },
+    required: [true, 'Status is required'],
+    default: 'CNR'
+  },
+  followUpDate: {
+    type: Date
+  }
+}, {
+  timestamps: true
+});
+
+const Lead = mongoose.model('Lead', leadSchema);
+
+module.exports = Lead;

@@ -6,13 +6,12 @@ const userSchema = new mongoose.Schema({
     required: [true, 'Name is required'],
     trim: true
   },
-  email: {
+  phone: {
     type: String,
-    required: [true, 'Email is required'],
+    required: [true, 'Phone is required'],
     unique: true,
-    lowercase: true,
     trim: true,
-    match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email address']
+    match: [/^\d{10,15}$/, 'Phone must be 10-15 digits']
   },
   password: {
     type: String,
@@ -22,7 +21,7 @@ const userSchema = new mongoose.Schema({
   role: {
     type: String,
     enum: {
-      values: ['Admin', 'Sales_Agent'],
+      values: ['Admin', 'Agent'],
       message: '{VALUE} is not a valid role'
     },
     required: [true, 'Role is required']
@@ -33,8 +32,8 @@ const userSchema = new mongoose.Schema({
   }
 });
 
-// Create unique index on email field
-userSchema.index({ email: 1 }, { unique: true });
+// Create unique index on phone field
+userSchema.index({ phone: 1 }, { unique: true });
 
 // Pre-save hook to hash password before saving to database
 userSchema.pre('save', async function() {

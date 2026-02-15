@@ -1,354 +1,325 @@
-/* Dashboard Container */
+/* ========================================
+   DASHBOARD CONTAINER
+   ======================================== */
+
 .dashboard-container {
-  min-height: calc(100vh - 64px);
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  padding: 40px 20px;
-}
-
-.dashboard-content {
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 32px;
+  padding: 24px;
+  min-height: calc(100vh - 70px);
 }
 
-/* Welcome Section */
-.welcome-section {
-  text-align: center;
+.dashboard-header {
+  margin-bottom: 32px;
+}
+
+.dashboard-header h1 {
+  font-size: 32px;
+  color: var(--text-primary);
   margin-bottom: 8px;
 }
 
-.welcome-title {
-  font-size: 36px;
-  font-weight: 700;
-  color: #333;
-  margin: 0 0 12px 0;
-}
-
-.welcome-subtitle {
+.dashboard-header p {
   font-size: 16px;
-  color: #666;
-  margin: 0;
+  color: var(--text-secondary);
 }
 
-/* User Info Card */
-.user-info-card {
-  background: white;
+/* ========================================
+   LEAD FORM SECTION
+   ======================================== */
+
+.lead-form-section {
+  background-color: var(--bg-primary);
   border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  padding: 32px;
+  padding: 24px;
+  margin-bottom: 32px;
+  box-shadow: var(--shadow-md);
+}
+
+.lead-form-section h2 {
+  font-size: 24px;
+  color: var(--text-primary);
+  margin-bottom: 20px;
+}
+
+.lead-form {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
 }
 
-.card-title {
-  font-size: 22px;
-  font-weight: 700;
-  color: #333;
-  margin: 0;
-}
-
-.info-grid {
+.form-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 24px;
+  gap: 16px;
 }
 
-.info-item {
+.form-group {
   display: flex;
   flex-direction: column;
+  gap: 6px;
+}
+
+.form-group-full {
+  grid-column: 1 / -1;
+}
+
+.form-group label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.form-group input,
+.form-group select {
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 14px;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: border-color 0.2s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+}
+
+.form-group input:disabled,
+.form-group select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+/* ========================================
+   TODAY'S FOLLOW-UPS SECTION
+   ======================================== */
+
+.today-followups-section {
+  background-color: rgba(255, 152, 0, 0.1);
+  border: 2px solid var(--warning-color);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 32px;
+}
+
+.today-followups-section h2 {
+  font-size: 24px;
+  color: var(--warning-color);
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
   gap: 8px;
 }
 
-.info-label {
-  font-size: 13px;
-  font-weight: 600;
-  color: #888;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+.today-followups-section h2::before {
+  content: '⚠️';
+  font-size: 28px;
 }
 
-.info-value {
-  font-size: 16px;
-  font-weight: 600;
-  color: #333;
-}
-
-.role-badge {
-  display: inline-block;
-  padding: 6px 16px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border-radius: 20px;
-  font-size: 14px;
-  font-weight: 600;
-  width: fit-content;
-}
-
-.btn-logout-dashboard {
-  padding: 12px 32px;
-  font-size: 15px;
-  font-weight: 600;
-  color: white;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  align-self: flex-start;
-}
-
-.btn-logout-dashboard:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-}
-
-.btn-logout-dashboard:active {
-  transform: translateY(0);
-}
-
-/* Features Grid */
-.features-grid {
+.followup-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 24px;
-}
-
-.feature-card {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  padding: 32px;
-  display: flex;
-  flex-direction: column;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 16px;
-  transition: all 0.3s ease;
-  position: relative;
-  overflow: hidden;
 }
 
-.feature-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+.followup-card {
+  background-color: var(--bg-primary);
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  box-shadow: var(--shadow-sm);
+  border-left: 4px solid var(--warning-color);
 }
 
-.feature-icon {
-  font-size: 48px;
-  line-height: 1;
+.followup-info h3 {
+  font-size: 18px;
+  color: var(--text-primary);
+  margin-bottom: 8px;
 }
 
-.feature-title {
-  font-size: 20px;
-  font-weight: 700;
-  color: #333;
-  margin: 0;
-}
-
-.feature-description {
+.followup-info p {
   font-size: 14px;
-  color: #666;
-  line-height: 1.6;
-  margin: 0;
-  flex-grow: 1;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
 }
 
-.coming-soon {
-  display: inline-block;
-  padding: 6px 14px;
-  background-color: #f0f0f0;
-  color: #888;
-  border-radius: 6px;
-  font-size: 12px;
+.followup-info .remark {
+  font-style: italic;
+  color: var(--text-tertiary);
+}
+
+.followup-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* ========================================
+   LEADS TABLE SECTION
+   ======================================== */
+
+.leads-table-section {
+  background-color: var(--bg-primary);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: var(--shadow-md);
+}
+
+.leads-table-section h2 {
+  font-size: 24px;
+  color: var(--text-primary);
+  margin-bottom: 20px;
+}
+
+.table-container {
+  overflow-x: auto;
+}
+
+.leads-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.leads-table thead {
+  background-color: var(--bg-secondary);
+}
+
+.leads-table th {
+  padding: 12px;
+  text-align: left;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  align-self: flex-start;
+  color: var(--text-primary);
+  border-bottom: 2px solid var(--border-color);
 }
 
-/* Responsive Design - Desktop Large (1920px and above) */
-@media (min-width: 1920px) {
-  .dashboard-content {
-    max-width: 1400px;
+.leads-table td {
+  padding: 12px;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+.leads-table tbody tr:hover {
+  background-color: var(--bg-tertiary);
+}
+
+.no-data {
+  text-align: center;
+  color: var(--text-secondary);
+  padding: 40px !important;
+  font-style: italic;
+}
+
+.remark-cell {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.actions-cell {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Status Badges */
+.status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.status-cnr {
+  background-color: rgba(33, 150, 243, 0.1);
+  color: var(--info-color);
+}
+
+.status-follow_up {
+  background-color: rgba(255, 152, 0, 0.1);
+  color: var(--warning-color);
+}
+
+.status-not_interested {
+  background-color: rgba(158, 158, 158, 0.1);
+  color: var(--text-tertiary);
+}
+
+.status-booked {
+  background-color: rgba(76, 175, 80, 0.1);
+  color: var(--success-color);
+}
+
+.status-invalid_no {
+  background-color: rgba(244, 67, 54, 0.1);
+  color: var(--error-color);
+}
+
+/* ========================================
+   RESPONSIVE DESIGN
+   ======================================== */
+
+@media (max-width: 768px) {
+  .dashboard-container {
+    padding: 16px;
   }
 
-  .welcome-title {
-    font-size: 42px;
-  }
-
-  .welcome-subtitle {
-    font-size: 18px;
-  }
-
-  .user-info-card {
-    padding: 40px;
-  }
-
-  .card-title {
+  .dashboard-header h1 {
     font-size: 24px;
   }
 
-  .info-value {
-    font-size: 18px;
+  .lead-form-section,
+  .today-followups-section,
+  .leads-table-section {
+    padding: 16px;
   }
 
-  .features-grid {
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-    gap: 28px;
+  .form-row {
+    grid-template-columns: 1fr;
   }
 
-  .feature-card {
-    padding: 36px;
+  .followup-cards {
+    grid-template-columns: 1fr;
   }
 
-  .feature-icon {
-    font-size: 56px;
+  .leads-table {
+    font-size: 12px;
   }
 
-  .feature-title {
-    font-size: 22px;
+  .leads-table th,
+  .leads-table td {
+    padding: 8px;
   }
 
-  .feature-description {
-    font-size: 15px;
+  .remark-cell {
+    max-width: 100px;
   }
 }
 
-/* Responsive Design - Tablet (768px) */
-@media (max-width: 768px) {
-  .dashboard-container {
-    padding: 32px 16px;
-  }
-
-  .dashboard-content {
-    gap: 24px;
-  }
-
-  .welcome-title {
-    font-size: 28px;
-  }
-
-  .welcome-subtitle {
-    font-size: 14px;
-  }
-
-  .user-info-card {
-    padding: 24px;
-  }
-
-  .card-title {
+@media (max-width: 480px) {
+  .dashboard-header h1 {
     font-size: 20px;
   }
 
-  .info-grid {
-    grid-template-columns: 1fr;
-    gap: 20px;
+  .form-actions {
+    flex-direction: column;
   }
 
-  .info-value {
-    font-size: 15px;
-  }
-
-  .btn-logout-dashboard {
+  .form-actions .btn {
     width: 100%;
-    align-self: stretch;
-  }
-
-  .features-grid {
-    grid-template-columns: 1fr;
-    gap: 20px;
-  }
-
-  .feature-card {
-    padding: 24px;
-  }
-
-  .feature-icon {
-    font-size: 40px;
-  }
-
-  .feature-title {
-    font-size: 18px;
-  }
-
-  .feature-description {
-    font-size: 13px;
-  }
-}
-
-/* Responsive Design - Mobile (480px and below) */
-@media (max-width: 480px) {
-  .dashboard-container {
-    padding: 24px 12px;
-  }
-
-  .dashboard-content {
-    gap: 20px;
-  }
-
-  .welcome-title {
-    font-size: 24px;
-  }
-
-  .welcome-subtitle {
-    font-size: 13px;
-  }
-
-  .user-info-card {
-    padding: 20px;
-    gap: 20px;
-  }
-
-  .card-title {
-    font-size: 18px;
-  }
-
-  .info-grid {
-    gap: 16px;
-  }
-
-  .info-label {
-    font-size: 12px;
-  }
-
-  .info-value {
-    font-size: 14px;
-  }
-
-  .role-badge {
-    padding: 5px 14px;
-    font-size: 13px;
-  }
-
-  .btn-logout-dashboard {
-    padding: 10px 24px;
-    font-size: 14px;
-  }
-
-  .features-grid {
-    gap: 16px;
-  }
-
-  .feature-card {
-    padding: 20px;
-    gap: 12px;
-  }
-
-  .feature-icon {
-    font-size: 36px;
-  }
-
-  .feature-title {
-    font-size: 17px;
-  }
-
-  .feature-description {
-    font-size: 12px;
-  }
-
-  .coming-soon {
-    font-size: 11px;
-    padding: 5px 12px;
   }
 }

@@ -49,7 +49,7 @@ const verifyToken = (req, res, next) => {
     // Attach user data to request object
     req.user = {
       userId: decoded.userId,
-      email: decoded.email,
+      phone: decoded.phone,
       role: decoded.role
     };
 

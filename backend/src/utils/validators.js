@@ -50,9 +50,8 @@ const rejectSQLInjection = (value) => {
 
 /**
  * Validation schema for user registration
- * Validates: name, email, password, role
+ * Validates: name, phone, password, role
  * Includes sanitization for XSS and SQL injection protection
- * Requirements: 1.5, 1.6, 1.7, 10.1, 10.2, 10.3
  */
 const registerValidation = [
   body('name')
@@ -64,13 +63,12 @@ const registerValidation = [
     .custom(rejectSQLInjection)
     .customSanitizer(sanitizeInput),
 
-  body('email')
+  body('phone')
     .trim()
     .notEmpty()
-    .withMessage('Email is required')
-    .isEmail()
-    .withMessage('Please provide a valid email address')
-    .normalizeEmail()
+    .withMessage('Phone is required')
+    .matches(/^\d{10,15}$/)
+    .withMessage('Phone must be 10-15 digits')
     .custom(rejectSQLInjection),
 
   body('password')
@@ -83,24 +81,22 @@ const registerValidation = [
   body('role')
     .notEmpty()
     .withMessage('Role is required')
-    .isIn(['Admin', 'Sales_Agent'])
-    .withMessage('Role must be either Admin or Sales_Agent')
+    .isIn(['Admin', 'Agent'])
+    .withMessage('Role must be either Admin or Agent')
 ];
 
 /**
  * Validation schema for user login
- * Validates: email, password
+ * Validates: phone, password
  * Includes sanitization for XSS and SQL injection protection
- * Requirements: 1.5, 10.1, 10.2, 10.3
  */
 const loginValidation = [
-  body('email')
+  body('phone')
     .trim()
     .notEmpty()
-    .withMessage('Email is required')
-    .isEmail()
-    .withMessage('Please provide a valid email address')
-    .normalizeEmail()
+    .withMessage('Phone is required')
+    .matches(/^\d{10,15}$/)
+    .withMessage('Phone must be 10-15 digits')
     .custom(rejectSQLInjection),
 
   body('password')
@@ -109,9 +105,44 @@ const loginValidation = [
     .custom(rejectSQLInjection)
 ];
 
+/**
+ * Validation schema for lead creation/update
+ */
+const leadValidation = [
+  body('name')
+    .trim()
+    .notEmpty()
+    .withMessage('Name is required')
+    .custom(rejectSQLInjection)
+    .customSanitizer(sanitizeInput),
+
+  body('number')
+    .trim()
+    .notEmpty()
+    .withMessage('Number is required')
+    .custom(rejectSQLInjection),
+
+  body('remark')
+    .optional()
+    .trim()
+    .custom(rejectSQLInjection)
+    .customSanitizer(sanitizeInput),
+
+  body('status')
+    .optional()
+    .isIn(['CNR', 'FOLLOW_UP', 'NOT_INTERESTED', 'BOOKED', 'INVALID_NO'])
+    .withMessage('Invalid status'),
+
+  body('followUpDate')
+    .optional()
+    .isISO8601()
+    .withMessage('Invalid date format')
+];
+
 module.exports = {
   registerValidation,
   loginValidation,
+  leadValidation,
   sanitizeInput,
   containsSQLInjection,
   rejectSQLInjection

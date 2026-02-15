@@ -9,16 +9,16 @@ const Register = () => {
 
   const [formData, setFormData] = useState({
     name: '',
-    email: '',
+    phone: '',
     password: '',
-    role: 'Sales_Agent',
+    role: 'Agent',
   });
 
   const [errors, setErrors] = useState({});
   const [apiError, setApiError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const { name, email, password, role } = formData;
+  const { name, phone, password, role } = formData;
 
   // Handle input changes
   const handleChange = (e) => {
@@ -45,11 +45,11 @@ const Register = () => {
       newErrors.name = 'Name is required';
     }
 
-    // Email validation
-    if (!email.trim()) {
-      newErrors.email = 'Email is required';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      newErrors.email = 'Please enter a valid email address';
+    // Phone validation
+    if (!phone.trim()) {
+      newErrors.phone = 'Phone is required';
+    } else if (!/^\d{10,15}$/.test(phone)) {
+      newErrors.phone = 'Phone must be 10-15 digits';
     }
 
     // Password validation
@@ -83,7 +83,7 @@ const Register = () => {
     setLoading(true);
 
     try {
-      const result = await register({ name, email, password, role });
+      const result = await register({ name, phone, password, role });
 
       if (result.success) {
         // Redirect to login on successful registration
@@ -133,20 +133,20 @@ const Register = () => {
           </div>
 
           <div className="form-group">
-            <label htmlFor="email">Email</label>
+            <label htmlFor="phone">Phone</label>
             <input
-              type="email"
-              id="email"
-              name="email"
-              value={email}
+              type="tel"
+              id="phone"
+              name="phone"
+              value={phone}
               onChange={handleChange}
-              className={errors.email ? 'input-error' : ''}
-              placeholder="Enter your email"
+              className={errors.phone ? 'input-error' : ''}
+              placeholder="Enter your phone (10-15 digits)"
               disabled={loading}
-              autoComplete="email"
+              autoComplete="tel"
             />
-            {errors.email && (
-              <span className="error-message field-error">{errors.email}</span>
+            {errors.phone && (
+              <span className="error-message field-error">{errors.phone}</span>
             )}
           </div>
 
@@ -178,7 +178,7 @@ const Register = () => {
               className={errors.role ? 'input-error' : ''}
               disabled={loading}
             >
-              <option value="Sales_Agent">Sales Agent</option>
+              <option value="Agent">Agent</option>
               <option value="Admin">Admin</option>
             </select>
             {errors.role && (

@@ -36,7 +36,7 @@ describe('User Model - Password Hashing', () => {
     
     const user = new User({
       name: 'Test User',
-      email: 'test@example.com',
+      phone: '9876543210',
       password: plainPassword,
       role: 'Admin'
     });
@@ -59,9 +59,9 @@ describe('User Model - Password Hashing', () => {
     
     const user = new User({
       name: 'Test User',
-      email: 'test2@example.com',
+      phone: '9876543211',
       password: plainPassword,
-      role: 'Sales_Agent'
+      role: 'Agent'
     });
 
     await user.save();
@@ -80,7 +80,7 @@ describe('User Model - Password Hashing', () => {
     
     const user = new User({
       name: 'Test User',
-      email: 'test3@example.com',
+      phone: '9876543212',
       password: plainPassword,
       role: 'Admin'
     });
@@ -110,7 +110,7 @@ describe('User Model - Password Hashing', () => {
     
     const user = new User({
       name: 'Test User',
-      email: 'test4@example.com',
+      phone: '9876543213',
       password: plainPassword,
       role: 'Admin'
     });
@@ -130,7 +130,7 @@ describe('User Model - Password Comparison', () => {
     
     const user = new User({
       name: 'Test User',
-      email: 'compare1@example.com',
+      phone: '9876543214',
       password: plainPassword,
       role: 'Admin'
     });
@@ -146,9 +146,9 @@ describe('User Model - Password Comparison', () => {
     
     const user = new User({
       name: 'Test User',
-      email: 'compare2@example.com',
+      phone: '9876543215',
       password: plainPassword,
-      role: 'Sales_Agent'
+      role: 'Agent'
     });
 
     await user.save();
@@ -162,7 +162,7 @@ describe('User Model - Password Comparison', () => {
     
     const user = new User({
       name: 'Test User',
-      email: 'compare3@example.com',
+      phone: '9876543216',
       password: plainPassword,
       role: 'Admin'
     });
@@ -178,7 +178,7 @@ describe('User Model - Password Comparison', () => {
     
     const user = new User({
       name: 'Test User',
-      email: 'compare4@example.com',
+      phone: '9876543217',
       password: plainPassword,
       role: 'Admin'
     });
@@ -206,7 +206,7 @@ describe('User Model - Validation', () => {
 
     expect(error).toBeDefined();
     expect(error.errors.name).toBeDefined();
-    expect(error.errors.email).toBeDefined();
+    expect(error.errors.phone).toBeDefined();
     expect(error.errors.password).toBeDefined();
     expect(error.errors.role).toBeDefined();
   });
@@ -214,7 +214,7 @@ describe('User Model - Validation', () => {
   test('should enforce minimum password length', async () => {
     const user = new User({
       name: 'Test User',
-      email: 'test5@example.com',
+      phone: '9876543218',
       password: 'short',
       role: 'Admin'
     });
@@ -231,12 +231,12 @@ describe('User Model - Validation', () => {
     expect(error.errors.password.message).toContain('at least 8 characters');
   });
 
-  test('should enforce unique email constraint', async () => {
-    const email = 'duplicate@example.com';
+  test('should enforce unique phone constraint', async () => {
+    const phone = '9876543219';
     
     const user1 = new User({
       name: 'User One',
-      email: email,
+      phone: phone,
       password: 'password123',
       role: 'Admin'
     });
@@ -244,9 +244,9 @@ describe('User Model - Validation', () => {
 
     const user2 = new User({
       name: 'User Two',
-      email: email,
+      phone: phone,
       password: 'password456',
-      role: 'Sales_Agent'
+      role: 'Agent'
     });
 
     let error;
@@ -260,10 +260,10 @@ describe('User Model - Validation', () => {
     expect(error.code).toBe(11000); // MongoDB duplicate key error
   });
 
-  test('should validate email format', async () => {
+  test('should validate phone format (10-15 digits)', async () => {
     const user = new User({
       name: 'Test User',
-      email: 'invalid-email',
+      phone: '123', // Too short
       password: 'password123',
       role: 'Admin'
     });
@@ -276,14 +276,14 @@ describe('User Model - Validation', () => {
     }
 
     expect(error).toBeDefined();
-    expect(error.errors.email).toBeDefined();
-    expect(error.errors.email.message).toContain('valid email address');
+    expect(error.errors.phone).toBeDefined();
+    expect(error.errors.phone.message).toContain('10-15 digits');
   });
 
   test('should validate role enum', async () => {
     const user = new User({
       name: 'Test User',
-      email: 'test6@example.com',
+      phone: '9876543220',
       password: 'password123',
       role: 'InvalidRole'
     });
@@ -298,5 +298,29 @@ describe('User Model - Validation', () => {
     expect(error).toBeDefined();
     expect(error.errors.role).toBeDefined();
     expect(error.errors.role.message).toContain('not a valid role');
+  });
+
+  test('should accept Admin as valid role', async () => {
+    const user = new User({
+      name: 'Test User',
+      phone: '9876543221',
+      password: 'password123',
+      role: 'Admin'
+    });
+
+    await user.save();
+    expect(user.role).toBe('Admin');
+  });
+
+  test('should accept Agent as valid role', async () => {
+    const user = new User({
+      name: 'Test User',
+      phone: '9876543222',
+      password: 'password123',
+      role: 'Agent'
+    });
+
+    await user.save();
+    expect(user.role).toBe('Agent');
   });
 });

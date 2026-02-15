@@ -22,7 +22,7 @@ describe('AuthController - register', () => {
     req = {
       body: {
         name: 'John Doe',
-        email: 'john@example.com',
+        phone: '9876543210',
         password: 'password123',
         role: 'Admin'
       }
@@ -53,7 +53,7 @@ describe('AuthController - register', () => {
       const mockUser = {
         _id: 'user123',
         name: 'John Doe',
-        email: 'john@example.com',
+        phone: '9876543210',
         role: 'Admin',
         createdAt: new Date(),
         save: jest.fn().mockResolvedValue(true)
@@ -62,13 +62,13 @@ describe('AuthController - register', () => {
 
       await register(req, res, next);
 
-      // Verify User.findOne was called with correct email
-      expect(User.findOne).toHaveBeenCalledWith({ email: 'john@example.com' });
+      // Verify User.findOne was called with correct phone
+      expect(User.findOne).toHaveBeenCalledWith({ phone: '9876543210' });
 
       // Verify user was created with correct data
       expect(User).toHaveBeenCalledWith({
         name: 'John Doe',
-        email: 'john@example.com',
+        phone: '9876543210',
         password: 'password123',
         role: 'Admin'
       });
@@ -84,7 +84,7 @@ describe('AuthController - register', () => {
         user: {
           _id: 'user123',
           name: 'John Doe',
-          email: 'john@example.com',
+          phone: '9876543210',
           role: 'Admin',
           createdAt: mockUser.createdAt
         }
@@ -102,7 +102,7 @@ describe('AuthController - register', () => {
       validationResult.mockReturnValue({
         isEmpty: () => false,
         array: () => [
-          { msg: 'Email is required' },
+          { msg: 'Phone is required' },
           { msg: 'Password must be at least 8 characters long' }
         ]
       });
@@ -115,7 +115,7 @@ describe('AuthController - register', () => {
         success: false,
         message: 'Validation failed',
         errors: [
-          'Email is required',
+          'Phone is required',
           'Password must be at least 8 characters long'
         ],
         statusCode: 400
@@ -126,8 +126,8 @@ describe('AuthController - register', () => {
     });
   });
 
-  describe('Duplicate email', () => {
-    it('should return 409 when user with email already exists', async () => {
+  describe('Duplicate phone', () => {
+    it('should return 409 when user with phone already exists', async () => {
       // Mock validation result - no errors
       validationResult.mockReturnValue({
         isEmpty: () => true,
@@ -137,19 +137,19 @@ describe('AuthController - register', () => {
       // Mock User.findOne - existing user found
       User.findOne.mockResolvedValue({
         _id: 'existing123',
-        email: 'john@example.com'
+        phone: '9876543210'
       });
 
       await register(req, res, next);
 
       // Verify User.findOne was called
-      expect(User.findOne).toHaveBeenCalledWith({ email: 'john@example.com' });
+      expect(User.findOne).toHaveBeenCalledWith({ phone: '9876543210' });
 
       // Verify response
       expect(res.status).toHaveBeenCalledWith(409);
       expect(res.json).toHaveBeenCalledWith({
         success: false,
-        message: 'User with this email already exists',
+        message: 'User with this phone already exists',
         statusCode: 409
       });
 
@@ -192,7 +192,7 @@ describe('AuthController - login', () => {
     // Mock request object
     req = {
       body: {
-        email: 'john@example.com',
+        phone: '9876543210',
         password: 'password123'
       }
     };
@@ -219,7 +219,7 @@ describe('AuthController - login', () => {
       const mockUser = {
         _id: 'user123',
         name: 'John Doe',
-        email: 'john@example.com',
+        phone: '9876543210',
         role: 'Admin',
         comparePassword: jest.fn().mockResolvedValue(true)
       };
@@ -233,8 +233,8 @@ describe('AuthController - login', () => {
 
       await login(req, res, next);
 
-      // Verify User.findOne was called with correct email
-      expect(User.findOne).toHaveBeenCalledWith({ email: 'john@example.com' });
+      // Verify User.findOne was called with correct phone
+      expect(User.findOne).toHaveBeenCalledWith({ phone: '9876543210' });
 
       // Verify comparePassword was called with correct password
       expect(mockUser.comparePassword).toHaveBeenCalledWith('password123');
@@ -243,7 +243,7 @@ describe('AuthController - login', () => {
       expect(jwt.sign).toHaveBeenCalledWith(
         {
           userId: 'user123',
-          email: 'john@example.com',
+          phone: '9876543210',
           role: 'Admin'
         },
         process.env.JWT_SECRET,
@@ -259,7 +259,7 @@ describe('AuthController - login', () => {
         user: {
           _id: 'user123',
           name: 'John Doe',
-          email: 'john@example.com',
+          phone: '9876543210',
           role: 'Admin'
         }
       });
@@ -271,7 +271,7 @@ describe('AuthController - login', () => {
   });
 
   describe('Invalid credentials - user not found', () => {
-    it('should return 401 when user with email does not exist', async () => {
+    it('should return 401 when user with phone does not exist', async () => {
       // Mock validation result - no errors
       validationResult.mockReturnValue({
         isEmpty: () => true,
@@ -284,7 +284,7 @@ describe('AuthController - login', () => {
       await login(req, res, next);
 
       // Verify User.findOne was called
-      expect(User.findOne).toHaveBeenCalledWith({ email: 'john@example.com' });
+      expect(User.findOne).toHaveBeenCalledWith({ phone: '9876543210' });
 
       // Verify response
       expect(res.status).toHaveBeenCalledWith(401);
@@ -310,7 +310,7 @@ describe('AuthController - login', () => {
       // Mock user with comparePassword method that returns false
       const mockUser = {
         _id: 'user123',
-        email: 'john@example.com',
+        phone: '9876543210',
         comparePassword: jest.fn().mockResolvedValue(false)
       };
 
@@ -320,7 +320,7 @@ describe('AuthController - login', () => {
       await login(req, res, next);
 
       // Verify User.findOne was called
-      expect(User.findOne).toHaveBeenCalledWith({ email: 'john@example.com' });
+      expect(User.findOne).toHaveBeenCalledWith({ phone: '9876543210' });
 
       // Verify comparePassword was called
       expect(mockUser.comparePassword).toHaveBeenCalledWith('password123');
@@ -344,7 +344,7 @@ describe('AuthController - login', () => {
       validationResult.mockReturnValue({
         isEmpty: () => false,
         array: () => [
-          { msg: 'Email is required' },
+          { msg: 'Phone is required' },
           { msg: 'Password is required' }
         ]
       });
@@ -357,7 +357,7 @@ describe('AuthController - login', () => {
         success: false,
         message: 'Validation failed',
         errors: [
-          'Email is required',
+          'Phone is required',
           'Password is required'
         ],
         statusCode: 400
@@ -403,7 +403,7 @@ describe('AuthController - getProfile', () => {
     req = {
       user: {
         userId: 'user123',
-        email: 'john@example.com',
+        phone: '9876543210',
         role: 'Admin'
       }
     };
@@ -424,7 +424,7 @@ describe('AuthController - getProfile', () => {
       const mockUser = {
         _id: 'user123',
         name: 'John Doe',
-        email: 'john@example.com',
+        phone: '9876543210',
         role: 'Admin',
         createdAt: new Date('2024-01-15T10:30:00Z')
       };
@@ -449,7 +449,7 @@ describe('AuthController - getProfile', () => {
         user: {
           _id: 'user123',
           name: 'John Doe',
-          email: 'john@example.com',
+          phone: '9876543210',
           role: 'Admin',
           createdAt: mockUser.createdAt
         }
@@ -508,7 +508,7 @@ describe('AuthController - getProfile', () => {
       const mockUser = {
         _id: 'user123',
         name: 'John Doe',
-        email: 'john@example.com',
+        phone: '9876543210',
         role: 'Admin',
         createdAt: new Date()
       };

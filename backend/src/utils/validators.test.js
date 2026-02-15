@@ -31,7 +31,7 @@ describe('Validators', () => {
     it('should pass validation with valid registration data', async () => {
       const req = createMockRequest({
         name: 'John Doe',
-        email: 'john@example.com',
+        phone: '9876543210',
         password: 'password123',
         role: 'Admin'
       });
@@ -42,7 +42,7 @@ describe('Validators', () => {
 
     it('should fail validation when name is missing', async () => {
       const req = createMockRequest({
-        email: 'john@example.com',
+        phone: '9876543210',
         password: 'password123',
         role: 'Admin'
       });
@@ -56,7 +56,7 @@ describe('Validators', () => {
     it('should fail validation when name is too short', async () => {
       const req = createMockRequest({
         name: 'J',
-        email: 'john@example.com',
+        phone: '9876543210',
         password: 'password123',
         role: 'Admin'
       });
@@ -67,7 +67,7 @@ describe('Validators', () => {
       expect(errors.some(err => err.path === 'name' && err.msg.includes('at least 2 characters'))).toBe(true);
     });
 
-    it('should fail validation when email is missing', async () => {
+    it('should fail validation when phone is missing', async () => {
       const req = createMockRequest({
         name: 'John Doe',
         password: 'password123',
@@ -77,13 +77,13 @@ describe('Validators', () => {
       const result = await runValidation(registerValidation, req);
       expect(result.isEmpty()).toBe(false);
       const errors = result.array();
-      expect(errors.some(err => err.path === 'email')).toBe(true);
+      expect(errors.some(err => err.path === 'phone')).toBe(true);
     });
 
-    it('should fail validation with invalid email format', async () => {
+    it('should fail validation with invalid phone format (too short)', async () => {
       const req = createMockRequest({
         name: 'John Doe',
-        email: 'invalid-email',
+        phone: '123',
         password: 'password123',
         role: 'Admin'
       });
@@ -91,13 +91,41 @@ describe('Validators', () => {
       const result = await runValidation(registerValidation, req);
       expect(result.isEmpty()).toBe(false);
       const errors = result.array();
-      expect(errors.some(err => err.path === 'email' && err.msg.includes('valid email'))).toBe(true);
+      expect(errors.some(err => err.path === 'phone' && err.msg.includes('10-15 digits'))).toBe(true);
+    });
+
+    it('should fail validation with invalid phone format (too long)', async () => {
+      const req = createMockRequest({
+        name: 'John Doe',
+        phone: '12345678901234567890',
+        password: 'password123',
+        role: 'Admin'
+      });
+
+      const result = await runValidation(registerValidation, req);
+      expect(result.isEmpty()).toBe(false);
+      const errors = result.array();
+      expect(errors.some(err => err.path === 'phone' && err.msg.includes('10-15 digits'))).toBe(true);
+    });
+
+    it('should fail validation with non-numeric phone', async () => {
+      const req = createMockRequest({
+        name: 'John Doe',
+        phone: 'abcd123456',
+        password: 'password123',
+        role: 'Admin'
+      });
+
+      const result = await runValidation(registerValidation, req);
+      expect(result.isEmpty()).toBe(false);
+      const errors = result.array();
+      expect(errors.some(err => err.path === 'phone' && err.msg.includes('10-15 digits'))).toBe(true);
     });
 
     it('should fail validation when password is missing', async () => {
       const req = createMockRequest({
         name: 'John Doe',
-        email: 'john@example.com',
+        phone: '9876543210',
         role: 'Admin'
       });
 
@@ -110,7 +138,7 @@ describe('Validators', () => {
     it('should fail validation when password is too short', async () => {
       const req = createMockRequest({
         name: 'John Doe',
-        email: 'john@example.com',
+        phone: '9876543210',
         password: 'short',
         role: 'Admin'
       });
@@ -124,7 +152,7 @@ describe('Validators', () => {
     it('should fail validation when role is missing', async () => {
       const req = createMockRequest({
         name: 'John Doe',
-        email: 'john@example.com',
+        phone: '9876543210',
         password: 'password123'
       });
 
@@ -137,7 +165,7 @@ describe('Validators', () => {
     it('should fail validation with invalid role', async () => {
       const req = createMockRequest({
         name: 'John Doe',
-        email: 'john@example.com',
+        phone: '9876543210',
         password: 'password123',
         role: 'InvalidRole'
       });
@@ -145,51 +173,39 @@ describe('Validators', () => {
       const result = await runValidation(registerValidation, req);
       expect(result.isEmpty()).toBe(false);
       const errors = result.array();
-      expect(errors.some(err => err.path === 'role' && err.msg.includes('Admin or Sales_Agent'))).toBe(true);
+      expect(errors.some(err => err.path === 'role' && err.msg.includes('Admin or Agent'))).toBe(true);
     });
 
-    it('should accept Sales_Agent as valid role', async () => {
+    it('should accept Agent as valid role', async () => {
       const req = createMockRequest({
         name: 'John Doe',
-        email: 'john@example.com',
+        phone: '9876543210',
         password: 'password123',
-        role: 'Sales_Agent'
+        role: 'Agent'
       });
 
       const result = await runValidation(registerValidation, req);
       expect(result.isEmpty()).toBe(true);
     });
 
-    it('should trim whitespace from name and email', async () => {
+    it('should trim whitespace from name and phone', async () => {
       const req = createMockRequest({
         name: '  John Doe  ',
-        email: '  john@example.com  ',
+        phone: '  9876543210  ',
         password: 'password123',
         role: 'Admin'
       });
 
       await runValidation(registerValidation, req);
       expect(req.body.name).toBe('John Doe');
-      expect(req.body.email).toBe('john@example.com');
-    });
-
-    it('should normalize email to lowercase', async () => {
-      const req = createMockRequest({
-        name: 'John Doe',
-        email: 'John@EXAMPLE.COM',
-        password: 'password123',
-        role: 'Admin'
-      });
-
-      await runValidation(registerValidation, req);
-      expect(req.body.email).toBe('john@example.com');
+      expect(req.body.phone).toBe('9876543210');
     });
   });
 
   describe('loginValidation', () => {
     it('should pass validation with valid login data', async () => {
       const req = createMockRequest({
-        email: 'john@example.com',
+        phone: '9876543210',
         password: 'password123'
       });
 
@@ -197,7 +213,7 @@ describe('Validators', () => {
       expect(result.isEmpty()).toBe(true);
     });
 
-    it('should fail validation when email is missing', async () => {
+    it('should fail validation when phone is missing', async () => {
       const req = createMockRequest({
         password: 'password123'
       });
@@ -205,24 +221,24 @@ describe('Validators', () => {
       const result = await runValidation(loginValidation, req);
       expect(result.isEmpty()).toBe(false);
       const errors = result.array();
-      expect(errors.some(err => err.path === 'email')).toBe(true);
+      expect(errors.some(err => err.path === 'phone')).toBe(true);
     });
 
-    it('should fail validation with invalid email format', async () => {
+    it('should fail validation with invalid phone format', async () => {
       const req = createMockRequest({
-        email: 'not-an-email',
+        phone: '123',
         password: 'password123'
       });
 
       const result = await runValidation(loginValidation, req);
       expect(result.isEmpty()).toBe(false);
       const errors = result.array();
-      expect(errors.some(err => err.path === 'email' && err.msg.includes('valid email'))).toBe(true);
+      expect(errors.some(err => err.path === 'phone' && err.msg.includes('10-15 digits'))).toBe(true);
     });
 
     it('should fail validation when password is missing', async () => {
       const req = createMockRequest({
-        email: 'john@example.com'
+        phone: '9876543210'
       });
 
       const result = await runValidation(loginValidation, req);
@@ -231,30 +247,20 @@ describe('Validators', () => {
       expect(errors.some(err => err.path === 'password')).toBe(true);
     });
 
-    it('should trim whitespace from email', async () => {
+    it('should trim whitespace from phone', async () => {
       const req = createMockRequest({
-        email: '  john@example.com  ',
+        phone: '  9876543210  ',
         password: 'password123'
       });
 
       await runValidation(loginValidation, req);
-      expect(req.body.email).toBe('john@example.com');
-    });
-
-    it('should normalize email to lowercase', async () => {
-      const req = createMockRequest({
-        email: 'John@EXAMPLE.COM',
-        password: 'password123'
-      });
-
-      await runValidation(loginValidation, req);
-      expect(req.body.email).toBe('john@example.com');
+      expect(req.body.phone).toBe('9876543210');
     });
 
     it('should not validate password length for login', async () => {
       // Login should accept any password length since we're just checking credentials
       const req = createMockRequest({
-        email: 'john@example.com',
+        phone: '9876543210',
         password: 'short'
       });
 
@@ -358,7 +364,7 @@ describe('Validators', () => {
 
     it('should not flag normal text', () => {
       expect(containsSQLInjection('John Doe')).toBe(false);
-      expect(containsSQLInjection('john@example.com')).toBe(false);
+      expect(containsSQLInjection('9876543210')).toBe(false);
       expect(containsSQLInjection('password123')).toBe(false);
     });
 
@@ -377,7 +383,7 @@ describe('Validators', () => {
 
     it('should return true for safe input', () => {
       expect(rejectSQLInjection('John Doe')).toBe(true);
-      expect(rejectSQLInjection('john@example.com')).toBe(true);
+      expect(rejectSQLInjection('9876543210')).toBe(true);
       expect(rejectSQLInjection('password123')).toBe(true);
     });
   });
@@ -386,7 +392,7 @@ describe('Validators', () => {
     it('should reject SQL injection in name field', async () => {
       const req = createMockRequest({
         name: "John'; DROP TABLE users--",
-        email: 'john@example.com',
+        phone: '9876543210',
         password: 'password123',
         role: 'Admin'
       });
@@ -397,10 +403,10 @@ describe('Validators', () => {
       expect(errors.some(err => err.path === 'name' && err.msg === 'Invalid input detected')).toBe(true);
     });
 
-    it('should reject SQL injection in email field', async () => {
+    it('should reject SQL injection in phone field', async () => {
       const req = createMockRequest({
         name: 'John Doe',
-        email: "admin'--@example.com",
+        phone: "9876543210'--",
         password: 'password123',
         role: 'Admin'
       });
@@ -408,13 +414,13 @@ describe('Validators', () => {
       const result = await runValidation(registerValidation, req);
       expect(result.isEmpty()).toBe(false);
       const errors = result.array();
-      expect(errors.some(err => err.path === 'email' && err.msg === 'Invalid input detected')).toBe(true);
+      expect(errors.some(err => err.path === 'phone' && err.msg === 'Invalid input detected')).toBe(true);
     });
 
     it('should reject SQL injection in password field', async () => {
       const req = createMockRequest({
         name: 'John Doe',
-        email: 'john@example.com',
+        phone: '9876543210',
         password: "password' OR '1'='1",
         role: 'Admin'
       });
@@ -428,7 +434,7 @@ describe('Validators', () => {
     it('should sanitize XSS in name field', async () => {
       const req = createMockRequest({
         name: '<script>alert("XSS")</script>',
-        email: 'john@example.com',
+        phone: '9876543210',
         password: 'password123',
         role: 'Admin'
       });
@@ -441,21 +447,21 @@ describe('Validators', () => {
   });
 
   describe('loginValidation with sanitization', () => {
-    it('should reject SQL injection in email field', async () => {
+    it('should reject SQL injection in phone field', async () => {
       const req = createMockRequest({
-        email: "admin'--@example.com",
+        phone: "9876543210'--",
         password: 'password123'
       });
 
       const result = await runValidation(loginValidation, req);
       expect(result.isEmpty()).toBe(false);
       const errors = result.array();
-      expect(errors.some(err => err.path === 'email' && err.msg === 'Invalid input detected')).toBe(true);
+      expect(errors.some(err => err.path === 'phone' && err.msg === 'Invalid input detected')).toBe(true);
     });
 
     it('should reject SQL injection in password field', async () => {
       const req = createMockRequest({
-        email: 'john@example.com',
+        phone: '9876543210',
         password: "' OR '1'='1"
       });
 

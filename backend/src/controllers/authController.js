@@ -71,14 +71,14 @@ const register = async (req, res, next) => {
       });
     }
 
-    const { name, email, password, role } = req.body;
+    const { name, phone, password, role } = req.body;
 
-    // Check if user with email already exists
-    const existingUser = await User.findOne({ email });
+    // Check if user with phone already exists
+    const existingUser = await User.findOne({ phone });
     if (existingUser) {
       return res.status(409).json({
         success: false,
-        message: 'User with this email already exists',
+        message: 'User with this phone already exists',
         statusCode: 409
       });
     }
@@ -86,7 +86,7 @@ const register = async (req, res, next) => {
     // Create new user (password will be hashed by pre-save hook)
     const user = new User({
       name,
-      email,
+      phone,
       password,
       role
     });
@@ -100,7 +100,7 @@ const register = async (req, res, next) => {
       user: {
         _id: user._id,
         name: user.name,
-        email: user.email,
+        phone: user.phone,
         role: user.role,
         createdAt: user.createdAt
       }
@@ -169,10 +169,10 @@ const login = async (req, res, next) => {
       });
     }
 
-    const { email, password } = req.body;
+    const { phone, password } = req.body;
 
-    // Find user by email
-    const user = await User.findOne({ email });
+    // Find user by phone
+    const user = await User.findOne({ phone });
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -191,10 +191,10 @@ const login = async (req, res, next) => {
       });
     }
 
-    // Generate JWT token with payload: userId, email, role
+    // Generate JWT token with payload: userId, phone, role
     const payload = {
       userId: user._id,
-      email: user.email,
+      phone: user.phone,
       role: user.role
     };
 
@@ -211,7 +211,7 @@ const login = async (req, res, next) => {
       user: {
         _id: user._id,
         name: user.name,
-        email: user.email,
+        phone: user.phone,
         role: user.role
       }
     });
@@ -287,7 +287,7 @@ const getProfile = async (req, res, next) => {
       user: {
         _id: user._id,
         name: user.name,
-        email: user.email,
+        phone: user.phone,
         role: user.role,
         createdAt: user.createdAt
       }

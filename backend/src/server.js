@@ -21,6 +21,7 @@ const cors = require('cors');
 
 // Import routes and error handler
 const authRoutes = require('./routes/authRoutes');
+const leadRoutes = require('./routes/leadRoutes');
 const errorHandler = require('./middleware/errorHandler');
 
 // Initialize Express app
@@ -38,6 +39,9 @@ app.use(express.urlencoded({ extended: true }));
 
 // Mount authentication routes
 app.use('/api/auth', authRoutes);
+
+// Mount lead routes
+app.use('/api/leads', leadRoutes);
 
 // 404 handler for unknown routes
 app.use((req, res) => {

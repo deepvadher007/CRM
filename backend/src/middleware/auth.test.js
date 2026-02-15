@@ -24,7 +24,7 @@ describe('Authentication Middleware - verifyToken', () => {
       // Generate a valid token
       const payload = {
         userId: '507f1f77bcf86cd799439011',
-        email: 'test@example.com',
+        phone: '9876543210',
         role: 'Admin'
       };
       const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '15m' });
@@ -38,7 +38,7 @@ describe('Authentication Middleware - verifyToken', () => {
       // Verify user data attached to request
       expect(req.user).toBeDefined();
       expect(req.user.userId).toBe(payload.userId);
-      expect(req.user.email).toBe(payload.email);
+      expect(req.user.phone).toBe(payload.phone);
       expect(req.user.role).toBe(payload.role);
 
       // Verify next() was called
@@ -98,7 +98,7 @@ describe('Authentication Middleware - verifyToken', () => {
 
   describe('Invalid token format scenarios', () => {
     test('should reject token without Bearer prefix', () => {
-      const payload = { userId: '123', email: 'test@example.com', role: 'Admin' };
+      const payload = { userId: '123', phone: '9876543210', role: 'Admin' };
       const token = jwt.sign(payload, process.env.JWT_SECRET);
 
       req.headers.authorization = token; // Missing "Bearer " prefix
@@ -134,7 +134,7 @@ describe('Authentication Middleware - verifyToken', () => {
       // Generate an expired token (expired 1 hour ago)
       const payload = {
         userId: '507f1f77bcf86cd799439011',
-        email: 'test@example.com',
+        phone: '9876543210',
         role: 'Admin'
       };
       const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '-1h' });
@@ -157,7 +157,7 @@ describe('Authentication Middleware - verifyToken', () => {
     test('should reject token signed with different secret', () => {
       const payload = {
         userId: '507f1f77bcf86cd799439011',
-        email: 'test@example.com',
+        phone: '9876543210',
         role: 'Admin'
       };
       const token = jwt.sign(payload, 'different-secret-key');
