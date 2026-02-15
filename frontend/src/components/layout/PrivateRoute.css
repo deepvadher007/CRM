@@ -1,0 +1,65 @@
+/* Loading state styles */
+.private-route-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background-color: #f5f5f5;
+}
+
+.private-route-loading .spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #007bff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.private-route-loading p {
+  color: #666;
+  font-size: 1rem;
+  margin: 0;
+}
+
+/* Forbidden access styles */
+.private-route-forbidden {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background-color: #f5f5f5;
+  padding: 2rem;
+  text-align: center;
+}
+
+.private-route-forbidden h2 {
+  color: #dc3545;
+  font-size: 2rem;
+  margin-bottom: 1rem;
+}
+
+.private-route-forbidden p {
+  color: #666;
+  font-size: 1rem;
+  margin: 0.5rem 0;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .private-route-forbidden h2 {
+    font-size: 1.5rem;
+  }
+
+  .private-route-forbidden p {
+    font-size: 0.9rem;
+  }
+}
