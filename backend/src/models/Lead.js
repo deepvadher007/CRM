@@ -6,6 +6,11 @@ const leadSchema = new mongoose.Schema({
     ref: 'User',
     required: [true, 'User is required']
   },
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: [true, 'Created by is required']
+  },
   date: {
     type: Date,
     default: Date.now
@@ -19,6 +24,11 @@ const leadSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Number is required'],
     trim: true
+  },
+  leadFrom: {
+    type: String,
+    trim: true,
+    default: ''
   },
   remark: {
     type: String,

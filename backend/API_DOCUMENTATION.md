@@ -298,6 +298,270 @@ curl -X GET http://localhost:5000/api/auth/profile \
 
 ---
 
+## Lead Management Endpoints
+
+### 4. Create Lead
+
+Create a new lead entry.
+
+**Endpoint:** `POST /api/leads`
+
+**Access:** Private (requires authentication)
+
+**Request Headers:**
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Request Body:**
+```json
+{
+  "date": "2024-01-15",
+  "name": "Jane Smith",
+  "number": "9876543210",
+  "leadFrom": "Facebook",
+  "remark": "Interested in 2BHK apartment",
+  "status": "CNR",
+  "followUpDate": "2024-01-20"
+}
+```
+
+**Request Body Parameters:**
+
+| Field | Type | Required | Description | Validation |
+|-------|------|----------|-------------|------------|
+| date | string | No | Lead entry date | ISO 8601 date format (defaults to current date) |
+| name | string | Yes | Lead's name | Min 2 characters |
+| number | string | Yes | Lead's phone number | Required |
+| leadFrom | string | No | Source of the lead | Optional (e.g., Facebook, Website, Referral) |
+| remark | string | No | Additional notes | Optional |
+| status | string | No | Lead status | Must be one of: CNR, FOLLOW_UP, NOT_INTERESTED, BOOKED, INVALID_NO (defaults to CNR) |
+| followUpDate | string | No | Follow-up date | ISO 8601 date format |
+
+**Success Response (201):**
+```json
+{
+  "success": true,
+  "message": "Lead created successfully",
+  "lead": {
+    "_id": "507f1f77bcf86cd799439012",
+    "user": "507f1f77bcf86cd799439011",
+    "date": "2024-01-15T00:00:00.000Z",
+    "name": "Jane Smith",
+    "number": "9876543210",
+    "leadFrom": "Facebook",
+    "remark": "Interested in 2BHK apartment",
+    "status": "CNR",
+    "followUpDate": "2024-01-20T00:00:00.000Z",
+    "createdAt": "2024-01-15T10:30:00.000Z",
+    "updatedAt": "2024-01-15T10:30:00.000Z"
+  }
+}
+```
+
+**Error Responses:**
+
+**400 - Validation Error:**
+```json
+{
+  "success": false,
+  "message": "Validation failed",
+  "errors": ["Name is required", "Number is required"],
+  "statusCode": 400
+}
+```
+
+**401 - Unauthorized:**
+```json
+{
+  "success": false,
+  "message": "No token provided",
+  "statusCode": 401
+}
+```
+
+---
+
+### 5. Get All Leads
+
+Retrieve all leads for the authenticated user.
+
+**Endpoint:** `GET /api/leads`
+
+**Access:** Private (requires authentication)
+
+**Request Headers:**
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "count": 2,
+  "leads": [
+    {
+      "_id": "507f1f77bcf86cd799439012",
+      "user": "507f1f77bcf86cd799439011",
+      "date": "2024-01-15T00:00:00.000Z",
+      "name": "Jane Smith",
+      "number": "9876543210",
+      "leadFrom": "Facebook",
+      "remark": "Interested in 2BHK apartment",
+      "status": "CNR",
+      "followUpDate": "2024-01-20T00:00:00.000Z",
+      "createdAt": "2024-01-15T10:30:00.000Z",
+      "updatedAt": "2024-01-15T10:30:00.000Z"
+    }
+  ]
+}
+```
+
+---
+
+### 6. Get Today's Follow-ups
+
+Retrieve all leads with follow-up date set to today for the authenticated user.
+
+**Endpoint:** `GET /api/leads/today`
+
+**Access:** Private (requires authentication)
+
+**Request Headers:**
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "count": 1,
+  "leads": [
+    {
+      "_id": "507f1f77bcf86cd799439012",
+      "name": "Jane Smith",
+      "number": "9876543210",
+      "leadFrom": "Facebook",
+      "remark": "Interested in 2BHK apartment",
+      "status": "FOLLOW_UP",
+      "followUpDate": "2024-01-15T00:00:00.000Z"
+    }
+  ]
+}
+```
+
+---
+
+### 7. Update Lead
+
+Update an existing lead.
+
+**Endpoint:** `PUT /api/leads/:id`
+
+**Access:** Private (requires authentication, user must own the lead)
+
+**Request Headers:**
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Request Body:**
+```json
+{
+  "name": "Jane Smith Updated",
+  "number": "9876543210",
+  "leadFrom": "Website",
+  "remark": "Now interested in 3BHK",
+  "status": "FOLLOW_UP",
+  "followUpDate": "2024-01-22"
+}
+```
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "message": "Lead updated successfully",
+  "lead": {
+    "_id": "507f1f77bcf86cd799439012",
+    "name": "Jane Smith Updated",
+    "number": "9876543210",
+    "leadFrom": "Website",
+    "remark": "Now interested in 3BHK",
+    "status": "FOLLOW_UP",
+    "followUpDate": "2024-01-22T00:00:00.000Z",
+    "updatedAt": "2024-01-15T11:00:00.000Z"
+  }
+}
+```
+
+**Error Responses:**
+
+**403 - Forbidden:**
+```json
+{
+  "success": false,
+  "message": "Not authorized to update this lead",
+  "statusCode": 403
+}
+```
+
+**404 - Not Found:**
+```json
+{
+  "success": false,
+  "message": "Lead not found",
+  "statusCode": 404
+}
+```
+
+---
+
+### 8. Delete Lead
+
+Delete a lead.
+
+**Endpoint:** `DELETE /api/leads/:id`
+
+**Access:** Private (requires authentication, user must own the lead)
+
+**Request Headers:**
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Success Response (200):**
+```json
+{
+  "success": true,
+  "message": "Lead deleted successfully"
+}
+```
+
+**Error Responses:**
+
+**403 - Forbidden:**
+```json
+{
+  "success": false,
+  "message": "Not authorized to delete this lead",
+  "statusCode": 403
+}
+```
+
+**404 - Not Found:**
+```json
+{
+  "success": false,
+  "message": "Lead not found",
+  "statusCode": 404
+}
+```
+
+---
+
 ## Security Considerations
 
 ### Password Security

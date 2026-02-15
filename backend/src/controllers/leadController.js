@@ -16,13 +16,15 @@ const createLead = async (req, res, next) => {
       });
     }
 
-    const { date, name, number, remark, status, followUpDate } = req.body;
+    const { date, name, number, leadFrom, remark, status, followUpDate } = req.body;
 
     const lead = new Lead({
       user: req.user.userId, // Automatically assign logged-in user
+      createdBy: req.user.userId, // Track who created this lead
       date: date || Date.now(),
       name,
       number,
+      leadFrom,
       remark,
       status: status || 'CNR',
       followUpDate
@@ -41,12 +43,23 @@ const createLead = async (req, res, next) => {
 };
 
 /**
- * Get all leads (filtered by logged-in user)
+ * Get all leads (role-based filtering)
+ * Admin: sees all leads with createdBy populated
+ * Agent: sees only their own leads
  */
 const getAllLeads = async (req, res, next) => {
   try {
-    // Only return leads belonging to the logged-in user
-    const leads = await Lead.find({ user: req.user.userId }).sort({ date: -1 });
+    let leads;
+    
+    if (req.user.role === 'Admin') {
+      // Admin sees all leads with creator information
+      leads = await Lead.find({})
+        .populate('createdBy', 'name role')
+        .sort({ date: -1 });
+    } else {
+      // Agent sees only their own leads
+      leads = await Lead.find({ user: req.user.userId }).sort({ date: -1 });
+    }
 
     res.status(200).json({
       success: true,
@@ -59,7 +72,9 @@ const getAllLeads = async (req, res, next) => {
 };
 
 /**
- * Update a lead (only if it belongs to logged-in user)
+ * Update a lead (role-based permission check)
+ * Admin: can update any lead
+ * Agent: can only update their own leads
  */
 const updateLead = async (req, res, next) => {
   try {
@@ -74,10 +89,15 @@ const updateLead = async (req, res, next) => {
     }
 
     const { id } = req.params;
-    const { date, name, number, remark, status, followUpDate } = req.body;
+    const { date, name, number, leadFrom, remark, status, followUpDate } = req.body;
 
-    // Find lead and verify it belongs to the logged-in user
-    const lead = await Lead.findOne({ _id: id, user: req.user.userId });
+    // Find lead with role-based filtering
+    let lead;
+    if (req.user.role === 'Admin') {
+      lead = await Lead.findById(id);
+    } else {
+      lead = await Lead.findOne({ _id: id, user: req.user.userId });
+    }
 
     if (!lead) {
       return res.status(404).json({
@@ -91,6 +111,7 @@ const updateLead = async (req, res, next) => {
     lead.date = date;
     lead.name = name;
     lead.number = number;
+    lead.leadFrom = leadFrom;
     lead.remark = remark;
     lead.status = status;
     lead.followUpDate = followUpDate;
@@ -108,14 +129,21 @@ const updateLead = async (req, res, next) => {
 };
 
 /**
- * Delete a lead (only if it belongs to logged-in user)
+ * Delete a lead (role-based permission check)
+ * Admin: can delete any lead
+ * Agent: can only delete their own leads
  */
 const deleteLead = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    // Find and delete lead only if it belongs to the logged-in user
-    const lead = await Lead.findOneAndDelete({ _id: id, user: req.user.userId });
+    // Find and delete lead with role-based filtering
+    let lead;
+    if (req.user.role === 'Admin') {
+      lead = await Lead.findByIdAndDelete(id);
+    } else {
+      lead = await Lead.findOneAndDelete({ _id: id, user: req.user.userId });
+    }
 
     if (!lead) {
       return res.status(404).json({
@@ -135,7 +163,9 @@ const deleteLead = async (req, res, next) => {
 };
 
 /**
- * Get today's follow-ups (filtered by logged-in user)
+ * Get today's follow-ups (role-based filtering)
+ * Admin: sees all today's follow-ups
+ * Agent: sees only their own follow-ups
  */
 const getTodayFollowUps = async (req, res, next) => {
   try {
@@ -145,14 +175,26 @@ const getTodayFollowUps = async (req, res, next) => {
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    // Filter by both user and today's date
-    const leads = await Lead.find({
-      user: req.user.userId,
-      followUpDate: {
-        $gte: today,
-        $lt: tomorrow
-      }
-    }).sort({ followUpDate: 1 });
+    let leads;
+    
+    if (req.user.role === 'Admin') {
+      // Admin sees all today's follow-ups
+      leads = await Lead.find({
+        followUpDate: {
+          $gte: today,
+          $lt: tomorrow
+        }
+      }).sort({ followUpDate: 1 });
+    } else {
+      // Agent sees only their own follow-ups
+      leads = await Lead.find({
+        user: req.user.userId,
+        followUpDate: {
+          $gte: today,
+          $lt: tomorrow
+        }
+      }).sort({ followUpDate: 1 });
+    }
 
     res.status(200).json({
       success: true,

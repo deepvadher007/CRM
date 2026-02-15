@@ -12,6 +12,7 @@ const Dashboard = () => {
     date: new Date().toISOString().split('T')[0],
     name: '',
     number: '',
+    leadFrom: '',
     remark: '',
     status: 'CNR',
     followUpDate: ''
@@ -24,6 +25,7 @@ const Dashboard = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [editingId, setEditingId] = useState(null);
+  const [phoneDropdown, setPhoneDropdown] = useState(null);
 
   // Fetch all leads
   const fetchLeads = async () => {
@@ -90,6 +92,7 @@ const Dashboard = () => {
         date: new Date().toISOString().split('T')[0],
         name: '',
         number: '',
+        leadFrom: '',
         remark: '',
         status: 'CNR',
         followUpDate: ''
@@ -112,6 +115,7 @@ const Dashboard = () => {
       date: lead.date ? new Date(lead.date).toISOString().split('T')[0] : '',
       name: lead.name,
       number: lead.number,
+      leadFrom: lead.leadFrom || '',
       remark: lead.remark || '',
       status: lead.status,
       followUpDate: lead.followUpDate ? new Date(lead.followUpDate).toISOString().split('T')[0] : ''
@@ -142,11 +146,26 @@ const Dashboard = () => {
       date: new Date().toISOString().split('T')[0],
       name: '',
       number: '',
+      leadFrom: '',
       remark: '',
       status: 'CNR',
       followUpDate: ''
     });
   };
+
+  // Toggle phone dropdown
+  const togglePhoneDropdown = (leadId) => {
+    setPhoneDropdown(phoneDropdown === leadId ? null : leadId);
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => {
+      if (phoneDropdown) setPhoneDropdown(null);
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [phoneDropdown]);
 
   // Format date for display
   const formatDate = (dateString) => {
@@ -207,6 +226,19 @@ const Dashboard = () => {
                 placeholder="Enter phone number"
                 disabled={loading}
                 required
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="leadFrom">Lead From (Optional)</label>
+              <input
+                type="text"
+                id="leadFrom"
+                name="leadFrom"
+                value={formData.leadFrom}
+                onChange={handleChange}
+                placeholder="e.g., Facebook, Website, Referral"
+                disabled={loading}
               />
             </div>
           </div>
@@ -301,23 +333,53 @@ const Dashboard = () => {
                 <th>Date</th>
                 <th>Name</th>
                 <th>Number</th>
+                <th>Lead From</th>
                 <th>Status</th>
                 <th>Follow-up</th>
                 <th>Remark</th>
+                {user?.role === 'Admin' && <th>Added By</th>}
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {leads.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="no-data">No leads found. Add your first lead above!</td>
+                  <td colSpan={user?.role === 'Admin' ? "9" : "8"} className="no-data">No leads found. Add your first lead above!</td>
                 </tr>
               ) : (
                 leads.map((lead) => (
                   <tr key={lead._id}>
                     <td>{formatDate(lead.date)}</td>
                     <td>{lead.name}</td>
-                    <td>{lead.number}</td>
+                    <td>
+                      <div className="phone-cell">
+                        <button 
+                          className="phone-button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            togglePhoneDropdown(lead._id);
+                          }}
+                        >
+                          📞 {lead.number}
+                        </button>
+                        {phoneDropdown === lead._id && (
+                          <div className="phone-dropdown" onClick={(e) => e.stopPropagation()}>
+                            <a href={`tel:${lead.number}`} className="dropdown-item">
+                              📞 Call
+                            </a>
+                            <a 
+                              href={`https://wa.me/${lead.number.replace(/\D/g, '')}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="dropdown-item"
+                            >
+                              💬 WhatsApp
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td>{lead.leadFrom || '-'}</td>
                     <td>
                       <span className={`status-badge status-${lead.status.toLowerCase()}`}>
                         {lead.status.replace('_', ' ')}
@@ -325,6 +387,11 @@ const Dashboard = () => {
                     </td>
                     <td>{formatDate(lead.followUpDate)}</td>
                     <td className="remark-cell">{lead.remark || '-'}</td>
+                    {user?.role === 'Admin' && (
+                      <td>
+                        {lead.createdBy ? `${lead.createdBy.name} (${lead.createdBy.role})` : '-'}
+                      </td>
+                    )}
                     <td className="actions-cell">
                       <button className="btn-icon" onClick={() => handleEdit(lead)} title="Edit">
                         ✏️

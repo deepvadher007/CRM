@@ -135,6 +135,12 @@ const leadValidation = [
     .withMessage('Number is required')
     .custom(rejectSQLInjection),
 
+  body('leadFrom')
+    .optional()
+    .trim()
+    .custom(rejectSQLInjection)
+    .customSanitizer(sanitizeInput),
+
   body('remark')
     .optional()
     .trim()

@@ -234,6 +234,64 @@
   align-items: center;
 }
 
+/* Phone Cell with Dropdown */
+.phone-cell {
+  position: relative;
+}
+
+.phone-button {
+  background: none;
+  border: none;
+  color: var(--primary-color);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.phone-button:hover {
+  background-color: var(--bg-tertiary);
+}
+
+.phone-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: var(--shadow-md);
+  z-index: 100;
+  min-width: 150px;
+  margin-top: 4px;
+  overflow: hidden;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  text-decoration: none;
+  color: var(--text-primary);
+  font-size: 14px;
+  transition: background-color 0.2s ease;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.dropdown-item:hover {
+  background-color: var(--bg-tertiary);
+  color: var(--primary-color);
+}
+
 /* Status Badges */
 .status-badge {
   display: inline-block;
