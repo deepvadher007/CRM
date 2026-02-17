@@ -8,7 +8,7 @@
  */
 
 const express = require('express');
-const { register, login, getProfile } = require('../controllers/authController');
+const { register, login, getProfile, changePassword, getAllAgents, forgotPassword, resetPassword } = require('../controllers/authController');
 const { registerValidation, loginValidation } = require('../utils/validators');
 const { verifyToken } = require('../middleware/auth');
 
@@ -68,5 +68,67 @@ router.post('/login', loginValidation, login);
  * @returns {404} User not found
  */
 router.get('/profile', verifyToken, getProfile);
+
+/**
+ * Change password
+ * 
+ * @route   PUT /api/auth/change-password
+ * @desc    Change authenticated user's password
+ * @access  Private (requires valid JWT token in Authorization header)
+ * @middleware verifyToken - Validates JWT token and attaches user data to request
+ * 
+ * @header {string} Authorization - Bearer token (format: "Bearer <token>")
+ * @body {string} oldPassword - Current password
+ * @body {string} newPassword - New password (min 8 characters)
+ * 
+ * @returns {200} Password changed successfully
+ * @returns {400} Validation error
+ * @returns {401} Invalid old password
+ */
+router.put('/change-password', verifyToken, changePassword);
+
+/**
+ * Get all agents
+ * 
+ * @route   GET /api/auth/agents
+ * @desc    Get list of all agents (Admin only)
+ * @access  Private (Admin only)
+ * @middleware verifyToken - Validates JWT token and attaches user data to request
+ * 
+ * @header {string} Authorization - Bearer token (format: "Bearer <token>")
+ * 
+ * @returns {200} List of agents
+ * @returns {403} Forbidden (not admin)
+ */
+router.get('/agents', verifyToken, getAllAgents);
+
+/**
+ * Forgot password
+ * 
+ * @route   POST /api/auth/forgot-password
+ * @desc    Send password reset email
+ * @access  Public
+ * 
+ * @body {string} email - User's email address
+ * 
+ * @returns {200} Success message (always returns success for security)
+ * @returns {400} Validation error
+ */
+router.post('/forgot-password', forgotPassword);
+
+/**
+ * Reset password
+ * 
+ * @route   PUT /api/auth/reset-password/:token
+ * @desc    Reset password using token from email
+ * @access  Public
+ * 
+ * @param {string} token - Reset token from email URL
+ * @body {string} password - New password (min 8 characters)
+ * 
+ * @returns {200} Password reset successful
+ * @returns {400} Invalid or expired token
+ */
+router.put('/reset-password/:token', resetPassword);
 
 module.exports = router;

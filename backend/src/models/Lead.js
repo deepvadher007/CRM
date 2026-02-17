@@ -30,6 +30,14 @@ const leadSchema = new mongoose.Schema({
     trim: true,
     default: ''
   },
+  leadSource: {
+    type: String,
+    enum: {
+      values: ['Own User', 'Investor', 'Inquiry', 'Other'],
+      message: '{VALUE} is not a valid lead source'
+    },
+    default: 'Own User'
+  },
   remark: {
     type: String,
     trim: true,
@@ -38,7 +46,7 @@ const leadSchema = new mongoose.Schema({
   status: {
     type: String,
     enum: {
-      values: ['CNR', 'FOLLOW_UP', 'NOT_INTERESTED', 'BOOKED', 'INVALID_NO'],
+      values: ['CNR', 'FOLLOW_UP', 'NOT_INTERESTED', 'BOOKED', 'INVALID_NO', 'Closed'],
       message: '{VALUE} is not a valid status'
     },
     required: [true, 'Status is required'],

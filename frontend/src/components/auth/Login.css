@@ -174,3 +174,24 @@
     font-size: 13px;
   }
 }
+
+/* ========================================
+   FORGOT PASSWORD LINK
+   ======================================== */
+
+.forgot-password-link {
+  text-align: right;
+  margin-top: -8px;
+}
+
+.forgot-password-link .link {
+  font-size: 13px;
+  color: var(--primary-color);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.forgot-password-link .link:hover {
+  color: var(--primary-hover);
+  text-decoration: underline;
+}

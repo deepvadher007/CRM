@@ -39,6 +39,12 @@ const userSchema = new mongoose.Schema({
     },
     required: [true, 'Role is required']
   },
+  resetPasswordToken: {
+    type: String
+  },
+  resetPasswordExpire: {
+    type: Date
+  },
   createdAt: {
     type: Date,
     default: Date.now

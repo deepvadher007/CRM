@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import { extractErrorMessage } from '../../utils/errorHandler';
@@ -13,6 +13,7 @@ const Dashboard = () => {
     name: '',
     number: '',
     leadFrom: '',
+    leadSource: 'Own User',
     remark: '',
     status: 'CNR',
     followUpDate: ''
@@ -21,29 +22,68 @@ const Dashboard = () => {
   // UI state
   const [leads, setLeads] = useState([]);
   const [todayFollowUps, setTodayFollowUps] = useState([]);
+  const [agents, setAgents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [duplicateWarning, setDuplicateWarning] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [phoneDropdown, setPhoneDropdown] = useState(null);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  
+  // Filter state
+  const [filters, setFilters] = useState({
+    status: '',
+    leadSource: '',
+    agent: '',
+    search: ''
+  });
+  
+  // Password change state
+  const [passwordData, setPasswordData] = useState({
+    oldPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  
+  // Refs for scrolling
+  const tableRef = useRef(null);
 
-  // Fetch all leads
+  // Fetch all leads with filters
   const fetchLeads = async () => {
     try {
-      const response = await api.get('/api/leads');
+      const params = new URLSearchParams();
+      if (filters.status) params.append('status', filters.status);
+      if (filters.leadSource) params.append('leadSource', filters.leadSource);
+      if (filters.agent) params.append('agent', filters.agent);
+      if (filters.search) params.append('search', filters.search);
+      
+      const response = await api.get(`/api/leads?${params.toString()}`);
       setLeads(response.data.leads || []);
     } catch (err) {
       console.error('Failed to fetch leads:', err);
     }
   };
 
-  // Fetch today's follow-ups
+  // Fetch pending follow-ups
   const fetchTodayFollowUps = async () => {
     try {
       const response = await api.get('/api/leads/today');
       setTodayFollowUps(response.data.leads || []);
     } catch (err) {
-      console.error('Failed to fetch today follow-ups:', err);
+      console.error('Failed to fetch follow-ups:', err);
+    }
+  };
+
+  // Fetch agents (Admin only)
+  const fetchAgents = async () => {
+    if (user?.role === 'Admin') {
+      try {
+        const response = await api.get('/api/auth/agents');
+        setAgents(response.data.agents || []);
+      } catch (err) {
+        console.error('Failed to fetch agents:', err);
+      }
     }
   };
 
@@ -51,7 +91,15 @@ const Dashboard = () => {
   useEffect(() => {
     fetchLeads();
     fetchTodayFollowUps();
+    fetchAgents();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Reload leads when filters change
+  useEffect(() => {
+    fetchLeads();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters]);
 
   // Handle form input changes
   const handleChange = (e) => {
@@ -59,6 +107,23 @@ const Dashboard = () => {
     setFormData({ ...formData, [name]: value });
     if (error) setError('');
     if (success) setSuccess('');
+    if (duplicateWarning) setDuplicateWarning('');
+  };
+
+  // Handle filter changes
+  const handleFilterChange = (e) => {
+    const { name, value } = e.target;
+    setFilters({ ...filters, [name]: value });
+  };
+
+  // Clear all filters
+  const clearFilters = () => {
+    setFilters({
+      status: '',
+      leadSource: '',
+      agent: '',
+      search: ''
+    });
   };
 
   // Handle form submission (create or update)
@@ -66,6 +131,7 @@ const Dashboard = () => {
     e.preventDefault();
     setError('');
     setSuccess('');
+    setDuplicateWarning('');
 
     // Validation
     if (!formData.name.trim() || !formData.number.trim()) {
@@ -83,8 +149,13 @@ const Dashboard = () => {
         setEditingId(null);
       } else {
         // Create new lead
-        await api.post('/api/leads', formData);
+        const response = await api.post('/api/leads', formData);
         setSuccess('Lead created successfully');
+        
+        // Check for duplicate warning
+        if (response.data.duplicateWarning) {
+          setDuplicateWarning(response.data.duplicateWarning);
+        }
       }
 
       // Reset form
@@ -93,6 +164,7 @@ const Dashboard = () => {
         name: '',
         number: '',
         leadFrom: '',
+        leadSource: 'Own User',
         remark: '',
         status: 'CNR',
         followUpDate: ''
@@ -116,6 +188,7 @@ const Dashboard = () => {
       name: lead.name,
       number: lead.number,
       leadFrom: lead.leadFrom || '',
+      leadSource: lead.leadSource || 'Own User',
       remark: lead.remark || '',
       status: lead.status,
       followUpDate: lead.followUpDate ? new Date(lead.followUpDate).toISOString().split('T')[0] : ''
@@ -147,10 +220,12 @@ const Dashboard = () => {
       name: '',
       number: '',
       leadFrom: '',
+      leadSource: 'Own User',
       remark: '',
       status: 'CNR',
       followUpDate: ''
     });
+    setDuplicateWarning('');
   };
 
   // Toggle phone dropdown
@@ -167,18 +242,124 @@ const Dashboard = () => {
     return () => document.removeEventListener('click', handleClickOutside);
   }, [phoneDropdown]);
 
+  // Handle password change
+  const handlePasswordChange = async (e) => {
+    e.preventDefault();
+    
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setError('New passwords do not match');
+      return;
+    }
+
+    if (passwordData.newPassword.length < 8) {
+      setError('New password must be at least 8 characters');
+      return;
+    }
+
+    try {
+      await api.put('/api/auth/change-password', {
+        oldPassword: passwordData.oldPassword,
+        newPassword: passwordData.newPassword
+      });
+      
+      setSuccess('Password changed successfully');
+      setShowChangePassword(false);
+      setPasswordData({ oldPassword: '', newPassword: '', confirmPassword: '' });
+    } catch (err) {
+      setError(extractErrorMessage(err, 'Failed to change password'));
+    }
+  };
+
   // Format date for display
   const formatDate = (dateString) => {
     if (!dateString) return '-';
     return new Date(dateString).toLocaleDateString('en-IN');
   };
 
+  // Scroll to matching lead and highlight
+  const scrollToLead = (leadId) => {
+    const row = document.getElementById(`lead-${leadId}`);
+    if (row) {
+      row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      row.classList.add('highlight-row');
+      setTimeout(() => row.classList.remove('highlight-row'), 2000);
+    }
+  };
+
+  // Search and scroll to first match
+  useEffect(() => {
+    if (filters.search && leads.length > 0) {
+      scrollToLead(leads[0]._id);
+    }
+  }, [leads, filters.search]);
+
   return (
     <div className="dashboard-container">
       <div className="dashboard-header">
         <h1>Hanuvansh CRM</h1>
-        <p>Welcome, {user?.name} ({user?.role})</p>
+        <div className="header-actions">
+          <p>Welcome, {user?.name} ({user?.role})</p>
+          <button 
+            className="btn btn-secondary btn-sm"
+            onClick={() => setShowChangePassword(true)}
+          >
+            Change Password
+          </button>
+        </div>
       </div>
+
+      {/* Change Password Modal */}
+      {showChangePassword && (
+        <div className="modal-overlay" onClick={() => setShowChangePassword(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h2>Change Password</h2>
+            <form onSubmit={handlePasswordChange}>
+              <div className="form-group">
+                <label>Current Password</label>
+                <input
+                  type="password"
+                  value={passwordData.oldPassword}
+                  onChange={(e) => setPasswordData({...passwordData, oldPassword: e.target.value})}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>New Password</label>
+                <input
+                  type="password"
+                  value={passwordData.newPassword}
+                  onChange={(e) => setPasswordData({...passwordData, newPassword: e.target.value})}
+                  required
+                  minLength="8"
+                />
+              </div>
+              <div className="form-group">
+                <label>Confirm New Password</label>
+                <input
+                  type="password"
+                  value={passwordData.confirmPassword}
+                  onChange={(e) => setPasswordData({...passwordData, confirmPassword: e.target.value})}
+                  required
+                  minLength="8"
+                />
+              </div>
+              <div className="modal-actions">
+                <button type="submit" className="btn btn-primary">Change Password</button>
+                <button 
+                  type="button" 
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    setShowChangePassword(false);
+                    setPasswordData({ oldPassword: '', newPassword: '', confirmPassword: '' });
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Lead Entry Form */}
       <div className="lead-form-section">
@@ -186,6 +367,11 @@ const Dashboard = () => {
         
         {error && <div className="alert alert-error">{error}</div>}
         {success && <div className="alert alert-success">{success}</div>}
+        {duplicateWarning && (
+          <div className={`alert ${duplicateWarning.startsWith('STRONG') ? 'alert-error' : 'alert-warning'}`}>
+            ⚠️ {duplicateWarning.replace('STRONG: ', '').replace('WEAK: ', '')}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="lead-form">
           <div className="form-row">
@@ -226,6 +412,7 @@ const Dashboard = () => {
                 placeholder="Enter phone number"
                 disabled={loading}
                 required
+                className={duplicateWarning ? 'input-error' : ''}
               />
             </div>
 
@@ -245,6 +432,22 @@ const Dashboard = () => {
 
           <div className="form-row">
             <div className="form-group">
+              <label htmlFor="leadSource">Lead Source</label>
+              <select
+                id="leadSource"
+                name="leadSource"
+                value={formData.leadSource}
+                onChange={handleChange}
+                disabled={loading}
+              >
+                <option value="Own User">Own User</option>
+                <option value="Investor">Investor</option>
+                <option value="Inquiry">Inquiry</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+
+            <div className="form-group">
               <label htmlFor="status">Status</label>
               <select
                 id="status"
@@ -258,6 +461,7 @@ const Dashboard = () => {
                 <option value="NOT_INTERESTED">Not Interested</option>
                 <option value="BOOKED">Booked</option>
                 <option value="INVALID_NO">Invalid No</option>
+                <option value="Closed">Closed</option>
               </select>
             </div>
 
@@ -300,16 +504,17 @@ const Dashboard = () => {
         </form>
       </div>
 
-      {/* Today's Follow-ups */}
+      {/* Pending Follow-ups */}
       {todayFollowUps.length > 0 && (
         <div className="today-followups-section">
-          <h2>Today's Follow-ups</h2>
+          <h2>Pending Follow-ups ({todayFollowUps.length})</h2>
           <div className="followup-cards">
             {todayFollowUps.map((lead) => (
               <div key={lead._id} className="followup-card">
                 <div className="followup-info">
                   <h3>{lead.name}</h3>
                   <p>📞 {lead.number}</p>
+                  <p className="followup-date">📅 {formatDate(lead.followUpDate)}</p>
                   {lead.remark && <p className="remark">💬 {lead.remark}</p>}
                 </div>
                 <div className="followup-actions">
@@ -323,8 +528,85 @@ const Dashboard = () => {
         </div>
       )}
 
+      {/* Filters Section */}
+      <div className="filters-section">
+        <h2>Filters</h2>
+        <div className="filters-row">
+          <div className="filter-group">
+            <label htmlFor="searchFilter">Search</label>
+            <input
+              type="text"
+              id="searchFilter"
+              name="search"
+              value={filters.search}
+              onChange={handleFilterChange}
+              placeholder="Search by name or phone"
+            />
+          </div>
+
+          <div className="filter-group">
+            <label htmlFor="statusFilter">Status</label>
+            <select
+              id="statusFilter"
+              name="status"
+              value={filters.status}
+              onChange={handleFilterChange}
+            >
+              <option value="">All Statuses</option>
+              <option value="CNR">CNR</option>
+              <option value="FOLLOW_UP">Follow Up</option>
+              <option value="NOT_INTERESTED">Not Interested</option>
+              <option value="BOOKED">Booked</option>
+              <option value="INVALID_NO">Invalid No</option>
+              <option value="Closed">Closed</option>
+            </select>
+          </div>
+
+          <div className="filter-group">
+            <label htmlFor="leadSourceFilter">Lead Source</label>
+            <select
+              id="leadSourceFilter"
+              name="leadSource"
+              value={filters.leadSource}
+              onChange={handleFilterChange}
+            >
+              <option value="">All Sources</option>
+              <option value="Own User">Own User</option>
+              <option value="Investor">Investor</option>
+              <option value="Inquiry">Inquiry</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          {user?.role === 'Admin' && (
+            <div className="filter-group">
+              <label htmlFor="agentFilter">Agent</label>
+              <select
+                id="agentFilter"
+                name="agent"
+                value={filters.agent}
+                onChange={handleFilterChange}
+              >
+                <option value="">All Agents</option>
+                {agents.map(agent => (
+                  <option key={agent._id} value={agent._id}>
+                    {agent.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div className="filter-group">
+            <button className="btn btn-secondary" onClick={clearFilters}>
+              Clear Filters
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* All Leads Table */}
-      <div className="leads-table-section">
+      <div className="leads-table-section" ref={tableRef}>
         <h2>All Leads ({leads.length})</h2>
         <div className="table-container">
           <table className="leads-table">
@@ -334,6 +616,7 @@ const Dashboard = () => {
                 <th>Name</th>
                 <th>Number</th>
                 <th>Lead From</th>
+                <th>Lead Source</th>
                 <th>Status</th>
                 <th>Follow-up</th>
                 <th>Remark</th>
@@ -344,11 +627,13 @@ const Dashboard = () => {
             <tbody>
               {leads.length === 0 ? (
                 <tr>
-                  <td colSpan={user?.role === 'Admin' ? "9" : "8"} className="no-data">No leads found. Add your first lead above!</td>
+                  <td colSpan={user?.role === 'Admin' ? "10" : "9"} className="no-data">
+                    No leads found. {filters.search || filters.status || filters.leadSource || filters.agent ? 'Try adjusting your filters.' : 'Add your first lead above!'}
+                  </td>
                 </tr>
               ) : (
                 leads.map((lead) => (
-                  <tr key={lead._id}>
+                  <tr key={lead._id} id={`lead-${lead._id}`}>
                     <td>{formatDate(lead.date)}</td>
                     <td>{lead.name}</td>
                     <td>
@@ -380,6 +665,7 @@ const Dashboard = () => {
                       </div>
                     </td>
                     <td>{lead.leadFrom || '-'}</td>
+                    <td>{lead.leadSource || 'Own User'}</td>
                     <td>
                       <span className={`status-badge status-${lead.status.toLowerCase()}`}>
                         {lead.status.replace('_', ' ')}

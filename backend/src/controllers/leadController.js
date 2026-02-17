@@ -16,7 +16,20 @@ const createLead = async (req, res, next) => {
       });
     }
 
-    const { date, name, number, leadFrom, remark, status, followUpDate } = req.body;
+    const { date, name, number, leadFrom, leadSource, remark, status, followUpDate } = req.body;
+
+    // Check for duplicate phone number
+    const duplicatePhone = await Lead.findOne({ number });
+    let duplicateWarning = null;
+
+    if (duplicatePhone) {
+      // Check if name also matches
+      if (duplicatePhone.name.toLowerCase() === name.toLowerCase()) {
+        duplicateWarning = 'STRONG: Lead with same name and phone already exists';
+      } else {
+        duplicateWarning = 'WEAK: Phone number already exists with different name';
+      }
+    }
 
     const lead = new Lead({
       user: req.user.userId, // Automatically assign logged-in user
@@ -25,6 +38,7 @@ const createLead = async (req, res, next) => {
       name,
       number,
       leadFrom,
+      leadSource: leadSource || 'Own User',
       remark,
       status: status || 'CNR',
       followUpDate
@@ -35,6 +49,7 @@ const createLead = async (req, res, next) => {
     res.status(201).json({
       success: true,
       message: 'Lead created successfully',
+      duplicateWarning,
       lead
     });
   } catch (error) {
@@ -43,22 +58,53 @@ const createLead = async (req, res, next) => {
 };
 
 /**
- * Get all leads (role-based filtering)
+ * Get all leads (role-based filtering with search and filters)
  * Admin: sees all leads with createdBy populated
  * Agent: sees only their own leads
+ * Supports query params: status, leadSource, agent (admin only), search
  */
 const getAllLeads = async (req, res, next) => {
   try {
-    let leads;
+    const { status, leadSource, agent, search } = req.query;
     
+    // Build base query
+    let query = {};
+    
+    // Role-based filtering
+    if (req.user.role !== 'Admin') {
+      query.user = req.user.userId;
+    } else if (agent) {
+      // Admin can filter by agent
+      query.user = agent;
+    }
+    
+    // Status filter
+    if (status) {
+      query.status = status;
+    }
+    
+    // Lead source filter
+    if (leadSource) {
+      query.leadSource = leadSource;
+    }
+    
+    // Search by name or phone (case insensitive)
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { number: { $regex: search, $options: 'i' } }
+      ];
+    }
+    
+    let leads;
     if (req.user.role === 'Admin') {
       // Admin sees all leads with creator information
-      leads = await Lead.find({})
+      leads = await Lead.find(query)
         .populate('createdBy', 'name role')
         .sort({ date: -1 });
     } else {
       // Agent sees only their own leads
-      leads = await Lead.find({ user: req.user.userId }).sort({ date: -1 });
+      leads = await Lead.find(query).sort({ date: -1 });
     }
 
     res.status(200).json({
@@ -89,7 +135,7 @@ const updateLead = async (req, res, next) => {
     }
 
     const { id } = req.params;
-    const { date, name, number, leadFrom, remark, status, followUpDate } = req.body;
+    const { date, name, number, leadFrom, leadSource, remark, status, followUpDate } = req.body;
 
     // Find lead with role-based filtering
     let lead;
@@ -112,6 +158,7 @@ const updateLead = async (req, res, next) => {
     lead.name = name;
     lead.number = number;
     lead.leadFrom = leadFrom;
+    lead.leadSource = leadSource;
     lead.remark = remark;
     lead.status = status;
     lead.followUpDate = followUpDate;
@@ -163,38 +210,29 @@ const deleteLead = async (req, res, next) => {
 };
 
 /**
- * Get today's follow-ups (role-based filtering)
- * Admin: sees all today's follow-ups
+ * Get pending follow-ups (role-based filtering)
+ * Shows leads where followUpDate <= today AND status != 'Closed'
+ * Admin: sees all pending follow-ups
  * Agent: sees only their own follow-ups
  */
 const getTodayFollowUps = async (req, res, next) => {
   try {
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    today.setHours(23, 59, 59, 999); // End of today
 
-    let leads;
+    let query = {
+      followUpDate: { $lte: today },
+      status: { $ne: 'Closed' }
+    };
     
-    if (req.user.role === 'Admin') {
-      // Admin sees all today's follow-ups
-      leads = await Lead.find({
-        followUpDate: {
-          $gte: today,
-          $lt: tomorrow
-        }
-      }).sort({ followUpDate: 1 });
-    } else {
-      // Agent sees only their own follow-ups
-      leads = await Lead.find({
-        user: req.user.userId,
-        followUpDate: {
-          $gte: today,
-          $lt: tomorrow
-        }
-      }).sort({ followUpDate: 1 });
+    // Role-based filtering
+    if (req.user.role !== 'Admin') {
+      query.user = req.user.userId;
     }
+
+    const leads = await Lead.find(query)
+      .populate('createdBy', 'name role')
+      .sort({ followUpDate: 1 });
 
     res.status(200).json({
       success: true,

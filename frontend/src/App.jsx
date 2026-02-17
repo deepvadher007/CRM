@@ -4,6 +4,8 @@ import { ThemeProvider } from './context/ThemeContext';
 import { ToastProvider } from './components/common/ToastContainer';
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
+import ForgotPassword from './components/auth/ForgotPassword';
+import ResetPassword from './components/auth/ResetPassword';
 import Dashboard from './components/dashboard/Dashboard';
 import PrivateRoute from './components/layout/PrivateRoute';
 import Navbar from './components/layout/Navbar';
@@ -39,6 +41,8 @@ function App() {
               {/* Public routes */}
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password/:token" element={<ResetPassword />} />
               
               {/* Protected routes */}
               <Route 
