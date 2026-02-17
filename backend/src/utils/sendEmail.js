@@ -30,31 +30,36 @@ const nodemailer = require('nodemailer');
  * });
  */
 const sendEmail = async (options) => {
-  // Create transporter
-  const transporter = nodemailer.createTransporter({
-    host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-    port: process.env.EMAIL_PORT || 587,
-    secure: false, // true for 465, false for other ports
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS
-    }
-  });
+  try {
+    // Create transporter (fixed: createTransport not createTransporter)
+    const transporter = nodemailer.createTransport({
+      host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+      port: parseInt(process.env.EMAIL_PORT) || 587,
+      secure: false, // true for 465, false for other ports
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+      }
+    });
 
-  // Email options
-  const mailOptions = {
-    from: `${process.env.EMAIL_FROM_NAME || 'Hanuvansh CRM'} <${process.env.EMAIL_USER}>`,
-    to: options.to,
-    subject: options.subject,
-    text: options.text,
-    html: options.html || options.text
-  };
+    // Email options
+    const mailOptions = {
+      from: `${process.env.EMAIL_FROM_NAME || 'Hanuvansh CRM'} <${process.env.EMAIL_USER}>`,
+      to: options.to,
+      subject: options.subject,
+      text: options.text,
+      html: options.html || options.text
+    };
 
-  // Send email
-  const info = await transporter.sendMail(mailOptions);
+    // Send email
+    const info = await transporter.sendMail(mailOptions);
 
-  console.log('Email sent: %s', info.messageId);
-  return info;
+    console.log('Email sent successfully: %s', info.messageId);
+    return info;
+  } catch (error) {
+    console.error('Email send error:', error);
+    throw error;
+  }
 };
 
 module.exports = sendEmail;
