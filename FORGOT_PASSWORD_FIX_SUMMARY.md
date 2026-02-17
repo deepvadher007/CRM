@@ -9,10 +9,14 @@
 
 ### 1. Fixed Email Utility (`backend/src/utils/sendEmail.js`)
 - ✅ Changed `nodemailer.createTransporter()` to `nodemailer.createTransport()`
+- ✅ Added production-ready SMTP configuration for Gmail on port 587
+- ✅ Added `tls: { rejectUnauthorized: false }` for Render compatibility
+- ✅ Added `transporter.verify()` to debug connection issues before sending
 - ✅ Added try-catch block for proper error handling
-- ✅ Added `console.error()` for email send failures
-- ✅ Converted port to integer with `parseInt()`
+- ✅ Added `console.error()` for SMTP verification and email send failures
+- ✅ Converted port to Number with `Number(process.env.EMAIL_PORT)`
 - ✅ Proper error propagation to controller
+- ✅ Set `secure: false` (required for port 587)
 
 ### 2. Added nodemailer to package.json
 - ✅ Added `"nodemailer": "^6.9.7"` to dependencies
@@ -30,6 +34,29 @@
 - ✅ Instructions for Gmail App Passwords included
 
 ## Production Deployment Checklist
+
+### SMTP Configuration Details
+The sendEmail utility now uses production-optimized settings:
+```javascript
+{
+  host: process.env.EMAIL_HOST,        // smtp.gmail.com
+  port: Number(process.env.EMAIL_PORT), // 587
+  secure: false,                        // MUST be false for port 587
+  auth: {
+    user: process.env.EMAIL_USER,      // your-email@gmail.com
+    pass: process.env.EMAIL_PASS       // app password
+  },
+  tls: {
+    rejectUnauthorized: false          // Required for Render
+  }
+}
+```
+
+**Important Notes:**
+- Port 587 requires `secure: false`
+- Port 465 requires `secure: true`
+- `tls.rejectUnauthorized: false` helps with Render's SSL certificates
+- `transporter.verify()` runs before each email to catch config errors early
 
 ### Environment Variables Required
 ```env

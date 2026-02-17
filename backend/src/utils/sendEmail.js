@@ -31,16 +31,28 @@ const nodemailer = require('nodemailer');
  */
 const sendEmail = async (options) => {
   try {
-    // Create transporter (fixed: createTransport not createTransporter)
+    // Create transporter with production-ready configuration
     const transporter = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-      port: parseInt(process.env.EMAIL_PORT) || 587,
-      secure: false, // true for 465, false for other ports
+      host: process.env.EMAIL_HOST,
+      port: Number(process.env.EMAIL_PORT),
+      secure: false, // must be false for 587
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
+      },
+      tls: {
+        rejectUnauthorized: false
       }
     });
+
+    // Verify transporter configuration
+    try {
+      await transporter.verify();
+      console.log('SMTP connection verified successfully');
+    } catch (verifyError) {
+      console.error('SMTP verification failed:', verifyError);
+      throw new Error('Email service configuration error. Please check SMTP settings.');
+    }
 
     // Email options
     const mailOptions = {
