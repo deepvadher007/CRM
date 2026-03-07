@@ -244,10 +244,59 @@ const getTodayFollowUps = async (req, res, next) => {
   }
 };
 
+/**
+ * Upload PDF for a lead (role-based permission check)
+ * Admin: can upload PDF for any lead
+ * Agent: can only upload PDF for their own leads
+ */
+const uploadPDF = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No PDF file uploaded',
+        statusCode: 400
+      });
+    }
+
+    // Find lead with role-based filtering
+    let lead;
+    if (req.user.role === 'Admin') {
+      lead = await Lead.findById(id);
+    } else {
+      lead = await Lead.findOne({ _id: id, user: req.user.userId });
+    }
+
+    if (!lead) {
+      return res.status(404).json({
+        success: false,
+        message: 'Lead not found or you do not have permission to upload PDF',
+        statusCode: 404
+      });
+    }
+
+    // Save PDF filename only (not full path)
+    lead.pdfFile = req.file.filename;
+    await lead.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'PDF uploaded successfully',
+      pdfFile: req.file.filename,
+      pdfUrl: `${process.env.BACKEND_URL || 'http://localhost:5000'}/uploads/${req.file.filename}`
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createLead,
   getAllLeads,
   updateLead,
   deleteLead,
-  getTodayFollowUps
+  getTodayFollowUps,
+  uploadPDF
 };

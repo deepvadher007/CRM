@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import api from '../../services/api';
 import './Navbar.css';
 
 /**
@@ -12,6 +13,15 @@ const Navbar = () => {
   const { isAuthenticated, user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [passwordData, setPasswordData] = useState({
+    oldPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
 
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
@@ -20,6 +30,50 @@ const Navbar = () => {
   const handleLogout = () => {
     setMobileMenuOpen(false);
     logout();
+  };
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    setPasswordError('');
+    setPasswordSuccess('');
+    
+    // Validation
+    if (!passwordData.oldPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
+      setPasswordError('All fields are required');
+      return;
+    }
+    
+    if (passwordData.newPassword.length < 6) {
+      setPasswordError('New password must be at least 6 characters');
+      return;
+    }
+    
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setPasswordError('Passwords do not match');
+      return;
+    }
+    
+    setChangingPassword(true);
+    
+    try {
+      const response = await api.put('/api/auth/change-password', {
+        oldPassword: passwordData.oldPassword,
+        newPassword: passwordData.newPassword
+      });
+      
+      if (response.data.success) {
+        setPasswordSuccess('Password changed successfully');
+        setTimeout(() => {
+          setShowChangePassword(false);
+          setPasswordData({ oldPassword: '', newPassword: '', confirmPassword: '' });
+          setPasswordSuccess('');
+        }, 2000);
+      }
+    } catch (err) {
+      setPasswordError(err.response?.data?.message || 'Failed to change password');
+    } finally {
+      setChangingPassword(false);
+    }
   };
 
   return (
@@ -60,6 +114,13 @@ const Navbar = () => {
                     <span className="user-name">{user?.name}</span>
                     <span className="user-role">{user?.role}</span>
                   </div>
+                  <button
+                    onClick={() => setShowChangePassword(true)}
+                    className="btn-change-password"
+                    aria-label="Change Password"
+                  >
+                    🔒 Change Password
+                  </button>
                   <button
                     onClick={handleLogout}
                     className="btn-logout"
@@ -132,6 +193,18 @@ const Navbar = () => {
               <span className="user-role">{user?.role}</span>
             </div>
 
+            {/* Change Password Button */}
+            <button
+              onClick={() => {
+                setShowChangePassword(true);
+                setMobileMenuOpen(false);
+              }}
+              className="mobile-btn-change-password"
+              aria-label="Change Password"
+            >
+              🔒 Change Password
+            </button>
+
             {/* Logout Button */}
             <button
               onClick={handleLogout}
@@ -161,6 +234,84 @@ const Navbar = () => {
           </>
         )}
       </div>
+
+      {/* Change Password Modal */}
+      {showChangePassword && (
+        <div className="modal-overlay" onClick={() => setShowChangePassword(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h3>Change Password</h3>
+            
+            {passwordError && (
+              <div className="error-message">{passwordError}</div>
+            )}
+            
+            {passwordSuccess && (
+              <div className="success-message">{passwordSuccess}</div>
+            )}
+            
+            <form onSubmit={handleChangePassword}>
+              <div className="form-group">
+                <label htmlFor="oldPassword">Old Password</label>
+                <input
+                  type="password"
+                  id="oldPassword"
+                  value={passwordData.oldPassword}
+                  onChange={(e) => setPasswordData({...passwordData, oldPassword: e.target.value})}
+                  placeholder="Enter old password"
+                  disabled={changingPassword}
+                  required
+                />
+              </div>
+              
+              <div className="form-group">
+                <label htmlFor="newPassword">New Password</label>
+                <input
+                  type="password"
+                  id="newPassword"
+                  value={passwordData.newPassword}
+                  onChange={(e) => setPasswordData({...passwordData, newPassword: e.target.value})}
+                  placeholder="Enter new password (min 6 characters)"
+                  minLength={6}
+                  disabled={changingPassword}
+                  required
+                />
+              </div>
+              
+              <div className="form-group">
+                <label htmlFor="confirmPassword">Confirm New Password</label>
+                <input
+                  type="password"
+                  id="confirmPassword"
+                  value={passwordData.confirmPassword}
+                  onChange={(e) => setPasswordData({...passwordData, confirmPassword: e.target.value})}
+                  placeholder="Confirm new password"
+                  disabled={changingPassword}
+                  required
+                />
+              </div>
+              
+              <div className="modal-actions">
+                <button type="submit" className="btn-primary" disabled={changingPassword}>
+                  {changingPassword ? 'Changing...' : 'Change Password'}
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    setShowChangePassword(false);
+                    setPasswordData({ oldPassword: '', newPassword: '', confirmPassword: '' });
+                    setPasswordError('');
+                    setPasswordSuccess('');
+                  }} 
+                  className="btn-secondary"
+                  disabled={changingPassword}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </nav>
   );
 };

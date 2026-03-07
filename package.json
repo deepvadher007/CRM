@@ -1,18 +1,25 @@
 {
-  "dependencies": {
-    "bcryptjs": "^3.0.3",
-    "cors": "^2.8.6",
-    "dotenv": "^17.3.1",
-    "express": "^5.2.1",
-    "express-validator": "^7.3.1",
-    "jsonwebtoken": "^9.0.3",
-    "mongoose": "^9.2.1",
-    "nodemailer": "^8.0.1"
+  "name": "hanuvansh-crm",
+  "version": "2.0.0",
+  "description": "Hanuvansh CRM - Full Stack Application",
+  "main": "index.js",
+  "scripts": {
+    "backend": "cd backend && npm start",
+    "frontend": "cd frontend && npm start",
+    "dev": "concurrently \"npm run backend\" \"npm run frontend\"",
+    "install-all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "test": "cd backend && npm test"
   },
+  "keywords": [
+    "crm",
+    "mern",
+    "react",
+    "nodejs",
+    "mongodb"
+  ],
+  "author": "Hanuvansh Estate Consultant",
+  "license": "ISC",
   "devDependencies": {
-    "jest": "^30.2.0",
-    "mongodb-memory-server": "^11.0.1",
-    "nodemon": "^3.1.11",
-    "supertest": "^7.2.2"
+    "concurrently": "^8.2.2"
   }
 }

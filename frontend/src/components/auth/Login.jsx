@@ -15,6 +15,7 @@ const Login = () => {
   const [errors, setErrors] = useState({});
   const [apiError, setApiError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [errorTimeout, setErrorTimeout] = useState(null);
 
   const { identifier, password } = formData;
 
@@ -28,10 +29,7 @@ const Login = () => {
       setErrors({ ...errors, [name]: '' });
     }
     
-    // Clear API error when user makes changes
-    if (apiError) {
-      setApiError('');
-    }
+    // Don't clear API error immediately - let it stay for 4 seconds
   };
 
   // Client-side validation
@@ -66,7 +64,11 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Clear previous errors
+    // Clear previous errors and timeout
+    if (errorTimeout) {
+      clearTimeout(errorTimeout);
+      setErrorTimeout(null);
+    }
     setApiError('');
 
     // Validate form
@@ -83,11 +85,29 @@ const Login = () => {
         // Redirect to dashboard on successful login
         navigate('/dashboard');
       } else {
-        // Display API error message
-        setApiError(result.error || 'Login failed. Please try again.');
+        // Display API error message and keep it for 4 seconds
+        const errorMsg = result.error || 'Login failed. Please try again.';
+        setApiError(errorMsg);
+        
+        // Auto-clear error after 4 seconds
+        const timeout = setTimeout(() => {
+          setApiError('');
+          setErrorTimeout(null);
+        }, 4000);
+        
+        setErrorTimeout(timeout);
       }
     } catch (error) {
-      setApiError('An unexpected error occurred. Please try again.');
+      const errorMsg = 'An unexpected error occurred. Please try again.';
+      setApiError(errorMsg);
+      
+      // Auto-clear error after 4 seconds
+      const timeout = setTimeout(() => {
+        setApiError('');
+        setErrorTimeout(null);
+      }, 4000);
+      
+      setErrorTimeout(timeout);
     } finally {
       setLoading(false);
     }
@@ -140,12 +160,6 @@ const Login = () => {
             {errors.password && (
               <span className="error-message field-error">{errors.password}</span>
             )}
-          </div>
-
-          <div className="forgot-password-link">
-            <Link to="/forgot-password" className="link">
-              Forgot Password?
-            </Link>
           </div>
 
           <button

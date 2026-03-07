@@ -25,6 +25,7 @@ const userSchema = new mongoose.Schema({
     lowercase: true,
     sparse: true, // Allows null/undefined but enforces uniqueness when present
     match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email address']
+    // Note: unique index is created explicitly below, not here
   },
   password: {
     type: String,
@@ -38,12 +39,6 @@ const userSchema = new mongoose.Schema({
       message: '{VALUE} is not a valid role'
     },
     required: [true, 'Role is required']
-  },
-  resetPasswordToken: {
-    type: String
-  },
-  resetPasswordExpire: {
-    type: Date
   },
   createdAt: {
     type: Date,

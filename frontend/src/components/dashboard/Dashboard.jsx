@@ -29,7 +29,6 @@ const Dashboard = () => {
   const [duplicateWarning, setDuplicateWarning] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [phoneDropdown, setPhoneDropdown] = useState(null);
-  const [showChangePassword, setShowChangePassword] = useState(false);
   
   // Filter state
   const [filters, setFilters] = useState({
@@ -39,12 +38,11 @@ const Dashboard = () => {
     search: ''
   });
   
-  // Password change state
-  const [passwordData, setPasswordData] = useState({
-    oldPassword: '',
-    newPassword: '',
-    confirmPassword: ''
-  });
+  // PDF upload state
+  const [uploadingPdf, setUploadingPdf] = useState(null);
+  const [whatsappPhone, setWhatsappPhone] = useState('');
+  const [showWhatsappModal, setShowWhatsappModal] = useState(false);
+  const [selectedLead, setSelectedLead] = useState(null);
   
   // Refs for scrolling
   const tableRef = useRef(null);
@@ -242,32 +240,120 @@ const Dashboard = () => {
     return () => document.removeEventListener('click', handleClickOutside);
   }, [phoneDropdown]);
 
-  // Handle password change
-  const handlePasswordChange = async (e) => {
-    e.preventDefault();
+  // Handle PDF upload
+  const handlePDFUpload = async (leadId, file) => {
+    if (!file) return;
     
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      setError('New passwords do not match');
+    // Validate file type
+    if (file.type !== 'application/pdf') {
+      setError('Only PDF files are allowed');
       return;
     }
-
-    if (passwordData.newPassword.length < 8) {
-      setError('New password must be at least 8 characters');
+    
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError('File size must be less than 5MB');
       return;
     }
-
+    
+    setUploadingPdf(leadId);
+    setError('');
+    
     try {
-      await api.put('/api/auth/change-password', {
-        oldPassword: passwordData.oldPassword,
-        newPassword: passwordData.newPassword
+      const formData = new FormData();
+      formData.append('pdf', file);
+      
+      const response = await api.post(`/api/leads/${leadId}/upload-pdf`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
       });
       
-      setSuccess('Password changed successfully');
-      setShowChangePassword(false);
-      setPasswordData({ oldPassword: '', newPassword: '', confirmPassword: '' });
+      if (response.data.success) {
+        setSuccess('PDF uploaded successfully');
+        fetchLeads(); // Refresh leads to show PDF
+      }
     } catch (err) {
-      setError(extractErrorMessage(err, 'Failed to change password'));
+      setError(extractErrorMessage(err, 'Failed to upload PDF'));
+    } finally {
+      setUploadingPdf(null);
     }
+  };
+
+  // Handle view PDF
+  const handleViewPDF = (pdfPath) => {
+    const baseURL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+    
+    // If pdfPath is already a full URL, use it directly
+    if (pdfPath.startsWith('http')) {
+      window.open(pdfPath, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    
+    // Extract filename from full path if it contains path separators
+    let filename = pdfPath;
+    if (pdfPath.includes('\\') || pdfPath.includes('/')) {
+      // Extract filename from full path (handles both Windows and Unix paths)
+      filename = pdfPath.split(/[\\/]/).pop();
+    }
+    
+    // Construct the full URL with /uploads/ prefix
+    const pdfUrl = `${baseURL}/uploads/${filename}`;
+    
+    // Open PDF in new tab with security attributes
+    window.open(pdfUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  // Handle WhatsApp share
+  const handleWhatsAppShare = (lead) => {
+    const baseURL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+    
+    // Extract filename from full path if needed
+    let filename = lead.pdfFile;
+    if (lead.pdfFile.includes('\\') || lead.pdfFile.includes('/')) {
+      filename = lead.pdfFile.split(/[\\/]/).pop();
+    }
+    
+    // Construct PDF URL
+    const pdfUrl = lead.pdfFile.startsWith('http') ? lead.pdfFile : `${baseURL}/uploads/${filename}`;
+    const message = `Hi ${lead.name}, please find the attached document:\n${pdfUrl}`;
+    
+    if (lead.number) {
+      // Use lead's phone number
+      const phone = lead.number.replace(/\D/g, ''); // Remove non-numeric
+      const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+      window.open(whatsappUrl, '_blank');
+    } else {
+      // Show modal to enter phone number
+      setSelectedLead(lead);
+      setShowWhatsappModal(true);
+    }
+  };
+
+  // Handle WhatsApp share with manual phone
+  const handleWhatsAppShareManual = () => {
+    if (!whatsappPhone) {
+      setError('Please enter a phone number');
+      return;
+    }
+    
+    const baseURL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+    
+    // Extract filename from full path if needed
+    let filename = selectedLead.pdfFile;
+    if (selectedLead.pdfFile.includes('\\') || selectedLead.pdfFile.includes('/')) {
+      filename = selectedLead.pdfFile.split(/[\\/]/).pop();
+    }
+    
+    const pdfUrl = selectedLead.pdfFile.startsWith('http') ? selectedLead.pdfFile : `${baseURL}/uploads/${filename}`;
+    const message = `Hi ${selectedLead.name}, please find the attached document:\n${pdfUrl}`;
+    const phone = whatsappPhone.replace(/\D/g, '');
+    const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+    
+    window.open(whatsappUrl, '_blank');
+    setShowWhatsappModal(false);
+    setWhatsappPhone('');
+    setSelectedLead(null);
   };
 
   // Format date for display
@@ -299,67 +385,8 @@ const Dashboard = () => {
         <h1>Hanuvansh CRM</h1>
         <div className="header-actions">
           <p>Welcome, {user?.name} ({user?.role})</p>
-          <button 
-            className="btn btn-secondary btn-sm"
-            onClick={() => setShowChangePassword(true)}
-          >
-            Change Password
-          </button>
         </div>
       </div>
-
-      {/* Change Password Modal */}
-      {showChangePassword && (
-        <div className="modal-overlay" onClick={() => setShowChangePassword(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h2>Change Password</h2>
-            <form onSubmit={handlePasswordChange}>
-              <div className="form-group">
-                <label>Current Password</label>
-                <input
-                  type="password"
-                  value={passwordData.oldPassword}
-                  onChange={(e) => setPasswordData({...passwordData, oldPassword: e.target.value})}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>New Password</label>
-                <input
-                  type="password"
-                  value={passwordData.newPassword}
-                  onChange={(e) => setPasswordData({...passwordData, newPassword: e.target.value})}
-                  required
-                  minLength="8"
-                />
-              </div>
-              <div className="form-group">
-                <label>Confirm New Password</label>
-                <input
-                  type="password"
-                  value={passwordData.confirmPassword}
-                  onChange={(e) => setPasswordData({...passwordData, confirmPassword: e.target.value})}
-                  required
-                  minLength="8"
-                />
-              </div>
-              <div className="modal-actions">
-                <button type="submit" className="btn btn-primary">Change Password</button>
-                <button 
-                  type="button" 
-                  className="btn btn-secondary"
-                  onClick={() => {
-                    setShowChangePassword(false);
-                    setPasswordData({ oldPassword: '', newPassword: '', confirmPassword: '' });
-                  }}
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* Lead Entry Form */}
       <div className="lead-form-section">
@@ -685,6 +712,46 @@ const Dashboard = () => {
                       <button className="btn-icon btn-delete" onClick={() => handleDelete(lead._id)} title="Delete">
                         🗑️
                       </button>
+                      
+                      {/* PDF Upload/View/Share */}
+                      <div className="pdf-actions">
+                        {lead.pdfFile ? (
+                          <>
+                            <button 
+                              className="btn-icon btn-pdf" 
+                              onClick={() => handleViewPDF(lead.pdfFile)} 
+                              title="View PDF"
+                            >
+                              📄
+                            </button>
+                            <button 
+                              className="btn-icon btn-whatsapp" 
+                              onClick={() => handleWhatsAppShare(lead)} 
+                              title="Share via WhatsApp"
+                            >
+                              💬
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <input
+                              type="file"
+                              accept="application/pdf"
+                              onChange={(e) => handlePDFUpload(lead._id, e.target.files[0])}
+                              id={`pdf-${lead._id}`}
+                              style={{ display: 'none' }}
+                              disabled={uploadingPdf === lead._id}
+                            />
+                            <label 
+                              htmlFor={`pdf-${lead._id}`} 
+                              className={`btn-icon btn-upload ${uploadingPdf === lead._id ? 'uploading' : ''}`}
+                              title="Upload PDF"
+                            >
+                              {uploadingPdf === lead._id ? '⏳' : '📎'}
+                            </label>
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -693,6 +760,35 @@ const Dashboard = () => {
           </table>
         </div>
       </div>
+
+      {/* WhatsApp Phone Number Modal */}
+      {showWhatsappModal && (
+        <div className="modal-overlay" onClick={() => setShowWhatsappModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h3>Enter WhatsApp Number</h3>
+            <p>Lead: {selectedLead?.name}</p>
+            <input
+              type="tel"
+              placeholder="Enter phone number with country code"
+              value={whatsappPhone}
+              onChange={(e) => setWhatsappPhone(e.target.value)}
+              className="modal-input"
+            />
+            <div className="modal-actions">
+              <button onClick={handleWhatsAppShareManual} className="btn-primary">
+                Share
+              </button>
+              <button onClick={() => {
+                setShowWhatsappModal(false);
+                setWhatsappPhone('');
+                setSelectedLead(null);
+              }} className="btn-secondary">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

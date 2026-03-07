@@ -2,12 +2,14 @@ const express = require('express');
 const router = express.Router();
 const { verifyToken } = require('../middleware/auth');
 const { leadValidation } = require('../utils/validators');
+const upload = require('../config/multer');
 const {
   createLead,
   getAllLeads,
   updateLead,
   deleteLead,
-  getTodayFollowUps
+  getTodayFollowUps,
+  uploadPDF
 } = require('../controllers/leadController');
 
 // All lead routes require authentication
@@ -27,5 +29,8 @@ router.put('/:id', leadValidation, updateLead);
 
 // DELETE /api/leads/:id - Delete lead
 router.delete('/:id', deleteLead);
+
+// POST /api/leads/:id/upload-pdf - Upload PDF for lead
+router.post('/:id/upload-pdf', upload.single('pdf'), uploadPDF);
 
 module.exports = router;

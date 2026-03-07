@@ -54,6 +54,10 @@ const leadSchema = new mongoose.Schema({
   },
   followUpDate: {
     type: Date
+  },
+  pdfFile: {
+    type: String,
+    default: null
   }
 }, {
   timestamps: true

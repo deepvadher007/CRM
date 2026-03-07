@@ -8,7 +8,7 @@
  */
 
 const express = require('express');
-const { register, login, getProfile, changePassword, getAllAgents, forgotPassword, resetPassword } = require('../controllers/authController');
+const { register, login, getProfile, changePassword, getAllAgents } = require('../controllers/authController');
 const { registerValidation, loginValidation } = require('../utils/validators');
 const { verifyToken } = require('../middleware/auth');
 
@@ -101,34 +101,5 @@ router.put('/change-password', verifyToken, changePassword);
  * @returns {403} Forbidden (not admin)
  */
 router.get('/agents', verifyToken, getAllAgents);
-
-/**
- * Forgot password
- * 
- * @route   POST /api/auth/forgot-password
- * @desc    Send password reset email
- * @access  Public
- * 
- * @body {string} email - User's email address
- * 
- * @returns {200} Success message (always returns success for security)
- * @returns {400} Validation error
- */
-router.post('/forgot-password', forgotPassword);
-
-/**
- * Reset password
- * 
- * @route   PUT /api/auth/reset-password/:token
- * @desc    Reset password using token from email
- * @access  Public
- * 
- * @param {string} token - Reset token from email URL
- * @body {string} password - New password (min 8 characters)
- * 
- * @returns {200} Password reset successful
- * @returns {400} Invalid or expired token
- */
-router.put('/reset-password/:token', resetPassword);
 
 module.exports = router;
