@@ -3,15 +3,16 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import Navbar from './Navbar';
 import * as AuthContext from '../../context/AuthContext';
+import { ThemeProvider } from '../../context/ThemeContext';
 
 // Mock the useAuth hook
 jest.mock('../../context/AuthContext', () => ({
   useAuth: jest.fn(),
 }));
 
-// Helper function to render with router
+// Helper function to render with router and theme
 const renderWithRouter = (component) => {
-  return render(<MemoryRouter>{component}</MemoryRouter>);
+  return render(<ThemeProvider><MemoryRouter>{component}</MemoryRouter></ThemeProvider>);
 };
 
 describe('Navbar Component', () => {
@@ -35,16 +36,16 @@ describe('Navbar Component', () => {
 
     test('displays login link when not authenticated', () => {
       renderWithRouter(<Navbar />);
-      const loginLink = screen.getByText('Login');
-      expect(loginLink).toBeInTheDocument();
-      expect(loginLink).toHaveAttribute('href', '/login');
+      const loginLinks = screen.getAllByText('Login');
+      expect(loginLinks.length).toBeGreaterThanOrEqual(1);
+      expect(loginLinks[0]).toHaveAttribute('href', '/login');
     });
 
     test('displays register link when not authenticated', () => {
       renderWithRouter(<Navbar />);
-      const registerLink = screen.getByText('Register');
-      expect(registerLink).toBeInTheDocument();
-      expect(registerLink).toHaveAttribute('href', '/register');
+      const registerLinks = screen.getAllByText('Register');
+      expect(registerLinks.length).toBeGreaterThanOrEqual(1);
+      expect(registerLinks[0]).toHaveAttribute('href', '/register');
     });
 
     test('does not display user info when not authenticated', () => {
@@ -77,24 +78,24 @@ describe('Navbar Component', () => {
 
     test('displays user name when authenticated', () => {
       renderWithRouter(<Navbar />);
-      expect(screen.getByText('John Doe')).toBeInTheDocument();
+      expect(screen.getAllByText('John Doe').length).toBeGreaterThanOrEqual(1);
     });
 
     test('displays user role when authenticated', () => {
       renderWithRouter(<Navbar />);
-      expect(screen.getByText('Admin')).toBeInTheDocument();
+      expect(screen.getAllByText('Admin').length).toBeGreaterThanOrEqual(1);
     });
 
     test('displays dashboard link when authenticated', () => {
       renderWithRouter(<Navbar />);
-      const dashboardLink = screen.getByText('Dashboard');
-      expect(dashboardLink).toBeInTheDocument();
-      expect(dashboardLink).toHaveAttribute('href', '/dashboard');
+      const dashboardLinks = screen.getAllByText('Dashboard');
+      expect(dashboardLinks.length).toBeGreaterThanOrEqual(1);
+      expect(dashboardLinks[0]).toHaveAttribute('href', '/dashboard');
     });
 
     test('displays logout button when authenticated', () => {
       renderWithRouter(<Navbar />);
-      expect(screen.getByText('Logout')).toBeInTheDocument();
+      expect(screen.getAllByText('Logout').length).toBeGreaterThanOrEqual(1);
     });
 
     test('does not display login/register links when authenticated', () => {
@@ -105,8 +106,8 @@ describe('Navbar Component', () => {
 
     test('calls logout function when logout button is clicked', () => {
       renderWithRouter(<Navbar />);
-      const logoutButton = screen.getByText('Logout');
-      fireEvent.click(logoutButton);
+      const logoutButtons = screen.getAllByText('Logout');
+      fireEvent.click(logoutButtons[0]);
       expect(mockLogout).toHaveBeenCalledTimes(1);
     });
 
@@ -118,7 +119,7 @@ describe('Navbar Component', () => {
       });
 
       renderWithRouter(<Navbar />);
-      expect(screen.getByText('Sales_Agent')).toBeInTheDocument();
+      expect(screen.getAllByText('Sales_Agent').length).toBeGreaterThanOrEqual(1);
     });
   });
 
@@ -144,7 +145,7 @@ describe('Navbar Component', () => {
     test('mobile menu opens when toggle button is clicked', () => {
       renderWithRouter(<Navbar />);
       const toggleButton = screen.getByLabelText('Toggle navigation menu');
-      const menu = document.querySelector('.navbar-menu');
+      const menu = document.querySelector('.navbar-mobile-menu');
 
       expect(menu).not.toHaveClass('open');
 
@@ -155,7 +156,7 @@ describe('Navbar Component', () => {
     test('mobile menu closes when toggle button is clicked again', () => {
       renderWithRouter(<Navbar />);
       const toggleButton = screen.getByLabelText('Toggle navigation menu');
-      const menu = document.querySelector('.navbar-menu');
+      const menu = document.querySelector('.navbar-mobile-menu');
 
       fireEvent.click(toggleButton);
       expect(menu).toHaveClass('open');
@@ -167,26 +168,28 @@ describe('Navbar Component', () => {
     test('mobile menu closes when dashboard link is clicked', () => {
       renderWithRouter(<Navbar />);
       const toggleButton = screen.getByLabelText('Toggle navigation menu');
-      const menu = document.querySelector('.navbar-menu');
+      const menu = document.querySelector('.navbar-mobile-menu');
 
       fireEvent.click(toggleButton);
       expect(menu).toHaveClass('open');
 
-      const dashboardLink = screen.getByText('Dashboard');
-      fireEvent.click(dashboardLink);
+      // Click the mobile nav link (it has the onClick handler to close the menu)
+      const mobileDashboardLink = document.querySelector('.mobile-nav-link');
+      fireEvent.click(mobileDashboardLink);
       expect(menu).not.toHaveClass('open');
     });
 
     test('mobile menu closes when logout is clicked', () => {
       renderWithRouter(<Navbar />);
       const toggleButton = screen.getByLabelText('Toggle navigation menu');
-      const menu = document.querySelector('.navbar-menu');
+      const menu = document.querySelector('.navbar-mobile-menu');
 
       fireEvent.click(toggleButton);
       expect(menu).toHaveClass('open');
 
-      const logoutButton = screen.getByText('Logout');
-      fireEvent.click(logoutButton);
+      // Click the mobile logout button
+      const mobileLogoutButton = document.querySelector('.mobile-btn-logout');
+      fireEvent.click(mobileLogoutButton);
       expect(menu).not.toHaveClass('open');
     });
   });
@@ -247,8 +250,8 @@ describe('Navbar Component', () => {
       });
 
       renderWithRouter(<Navbar />);
-      const logoutButton = screen.getByLabelText('Logout');
-      expect(logoutButton).toBeInTheDocument();
+      const logoutButtons = screen.getAllByLabelText('Logout');
+      expect(logoutButtons.length).toBeGreaterThanOrEqual(1);
     });
   });
 });

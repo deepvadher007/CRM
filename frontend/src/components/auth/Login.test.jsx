@@ -28,50 +28,37 @@ describe('Login Component', () => {
 
   test('renders login form correctly', () => {
     renderLogin();
-    
-    expect(screen.getByText('Login')).toBeInTheDocument();
+
+    // There are two elements with "Login" text (heading + button), use getAllByText
+    expect(screen.getAllByText('Login').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('Welcome back! Please login to your account.')).toBeInTheDocument();
-    expect(screen.getByLabelText('Email')).toBeInTheDocument();
+    expect(screen.getByLabelText('Email or Phone')).toBeInTheDocument();
     expect(screen.getByLabelText('Password')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /login/i })).toBeInTheDocument();
     expect(screen.getByText(/don't have an account/i)).toBeInTheDocument();
     expect(screen.getByText('Register here')).toBeInTheDocument();
   });
 
-  test('displays validation error for empty email', async () => {
+  test('displays validation error for empty identifier', async () => {
     renderLogin();
-    
-    const submitButton = screen.getByRole('button', { name: /login/i });
-    fireEvent.click(submitButton);
-    
-    await waitFor(() => {
-      expect(screen.getByText('Email is required')).toBeInTheDocument();
-    });
-  });
 
-  test('displays validation error for invalid email format', async () => {
-    renderLogin();
-    
-    const emailInput = screen.getByLabelText('Email');
-    fireEvent.change(emailInput, { target: { value: 'invalid-email' } });
-    
     const submitButton = screen.getByRole('button', { name: /login/i });
     fireEvent.click(submitButton);
-    
+
     await waitFor(() => {
-      expect(screen.getByText('Please enter a valid email address')).toBeInTheDocument();
+      expect(screen.getByText('Email or phone is required')).toBeInTheDocument();
     });
   });
 
   test('displays validation error for empty password', async () => {
     renderLogin();
-    
-    const emailInput = screen.getByLabelText('Email');
-    fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
-    
+
+    const identifierInput = screen.getByLabelText('Email or Phone');
+    fireEvent.change(identifierInput, { target: { value: 'test@example.com' } });
+
     const submitButton = screen.getByRole('button', { name: /login/i });
     fireEvent.click(submitButton);
-    
+
     await waitFor(() => {
       expect(screen.getByText('Password is required')).toBeInTheDocument();
     });
@@ -79,41 +66,41 @@ describe('Login Component', () => {
 
   test('clears field error when user starts typing', async () => {
     renderLogin();
-    
+
     const submitButton = screen.getByRole('button', { name: /login/i });
     fireEvent.click(submitButton);
-    
+
     await waitFor(() => {
-      expect(screen.getByText('Email is required')).toBeInTheDocument();
+      expect(screen.getByText('Email or phone is required')).toBeInTheDocument();
     });
-    
-    const emailInput = screen.getByLabelText('Email');
-    fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
-    
+
+    const identifierInput = screen.getByLabelText('Email or Phone');
+    fireEvent.change(identifierInput, { target: { value: 'test@example.com' } });
+
     await waitFor(() => {
-      expect(screen.queryByText('Email is required')).not.toBeInTheDocument();
+      expect(screen.queryByText('Email or phone is required')).not.toBeInTheDocument();
     });
   });
 
   test('shows loading state during form submission', async () => {
     renderLogin();
-    
-    const emailInput = screen.getByLabelText('Email');
+
+    const identifierInput = screen.getByLabelText('Email or Phone');
     const passwordInput = screen.getByLabelText('Password');
-    
-    fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
+
+    fireEvent.change(identifierInput, { target: { value: 'test@example.com' } });
     fireEvent.change(passwordInput, { target: { value: 'password123' } });
-    
+
     const submitButton = screen.getByRole('button', { name: /login/i });
     fireEvent.click(submitButton);
-    
+
     // Button should show loading text
     expect(screen.getByText('Logging in...')).toBeInTheDocument();
   });
 
   test('link to register page is present', () => {
     renderLogin();
-    
+
     const registerLink = screen.getByText('Register here');
     expect(registerLink).toHaveAttribute('href', '/register');
   });

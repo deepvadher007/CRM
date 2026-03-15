@@ -29,6 +29,7 @@ const Dashboard = () => {
   const [duplicateWarning, setDuplicateWarning] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [phoneDropdown, setPhoneDropdown] = useState(null);
+  const [assigningLeadId, setAssigningLeadId] = useState(null);
   
   // Filter state
   const [filters, setFilters] = useState({
@@ -37,12 +38,6 @@ const Dashboard = () => {
     agent: '',
     search: ''
   });
-  
-  // PDF upload state
-  const [uploadingPdf, setUploadingPdf] = useState(null);
-  const [whatsappPhone, setWhatsappPhone] = useState('');
-  const [showWhatsappModal, setShowWhatsappModal] = useState(false);
-  const [selectedLead, setSelectedLead] = useState(null);
   
   // Refs for scrolling
   const tableRef = useRef(null);
@@ -210,6 +205,17 @@ const Dashboard = () => {
     }
   };
 
+  // Handle lead assignment
+  const handleAssignLead = async (leadId, agentId) => {
+    try {
+      await api.put(`/api/leads/assign/${leadId}`, { agentId });
+      await fetchLeads();
+      setAssigningLeadId(null);
+    } catch (err) {
+      setError(extractErrorMessage(err, 'Failed to assign lead'));
+    }
+  };
+
   // Cancel edit
   const handleCancelEdit = () => {
     setEditingId(null);
@@ -235,126 +241,11 @@ const Dashboard = () => {
   useEffect(() => {
     const handleClickOutside = () => {
       if (phoneDropdown) setPhoneDropdown(null);
+      if (assigningLeadId) setAssigningLeadId(null);
     };
     document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
-  }, [phoneDropdown]);
-
-  // Handle PDF upload
-  const handlePDFUpload = async (leadId, file) => {
-    if (!file) return;
-    
-    // Validate file type
-    if (file.type !== 'application/pdf') {
-      setError('Only PDF files are allowed');
-      return;
-    }
-    
-    // Validate file size (5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      setError('File size must be less than 5MB');
-      return;
-    }
-    
-    setUploadingPdf(leadId);
-    setError('');
-    
-    try {
-      const formData = new FormData();
-      formData.append('pdf', file);
-      
-      const response = await api.post(`/api/leads/${leadId}/upload-pdf`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      });
-      
-      if (response.data.success) {
-        setSuccess('PDF uploaded successfully');
-        fetchLeads(); // Refresh leads to show PDF
-      }
-    } catch (err) {
-      setError(extractErrorMessage(err, 'Failed to upload PDF'));
-    } finally {
-      setUploadingPdf(null);
-    }
-  };
-
-  // Handle view PDF
-  const handleViewPDF = (pdfPath) => {
-    const baseURL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-    
-    // If pdfPath is already a full URL, use it directly
-    if (pdfPath.startsWith('http')) {
-      window.open(pdfPath, '_blank', 'noopener,noreferrer');
-      return;
-    }
-    
-    // Extract filename from full path if it contains path separators
-    let filename = pdfPath;
-    if (pdfPath.includes('\\') || pdfPath.includes('/')) {
-      // Extract filename from full path (handles both Windows and Unix paths)
-      filename = pdfPath.split(/[\\/]/).pop();
-    }
-    
-    // Construct the full URL with /uploads/ prefix
-    const pdfUrl = `${baseURL}/uploads/${filename}`;
-    
-    // Open PDF in new tab with security attributes
-    window.open(pdfUrl, '_blank', 'noopener,noreferrer');
-  };
-
-  // Handle WhatsApp share
-  const handleWhatsAppShare = (lead) => {
-    const baseURL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-    
-    // Extract filename from full path if needed
-    let filename = lead.pdfFile;
-    if (lead.pdfFile.includes('\\') || lead.pdfFile.includes('/')) {
-      filename = lead.pdfFile.split(/[\\/]/).pop();
-    }
-    
-    // Construct PDF URL
-    const pdfUrl = lead.pdfFile.startsWith('http') ? lead.pdfFile : `${baseURL}/uploads/${filename}`;
-    const message = `Hi ${lead.name}, please find the attached document:\n${pdfUrl}`;
-    
-    if (lead.number) {
-      // Use lead's phone number
-      const phone = lead.number.replace(/\D/g, ''); // Remove non-numeric
-      const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
-      window.open(whatsappUrl, '_blank');
-    } else {
-      // Show modal to enter phone number
-      setSelectedLead(lead);
-      setShowWhatsappModal(true);
-    }
-  };
-
-  // Handle WhatsApp share with manual phone
-  const handleWhatsAppShareManual = () => {
-    if (!whatsappPhone) {
-      setError('Please enter a phone number');
-      return;
-    }
-    
-    const baseURL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-    
-    // Extract filename from full path if needed
-    let filename = selectedLead.pdfFile;
-    if (selectedLead.pdfFile.includes('\\') || selectedLead.pdfFile.includes('/')) {
-      filename = selectedLead.pdfFile.split(/[\\/]/).pop();
-    }
-    
-    const pdfUrl = selectedLead.pdfFile.startsWith('http') ? selectedLead.pdfFile : `${baseURL}/uploads/${filename}`;
-    const message = `Hi ${selectedLead.name}, please find the attached document:\n${pdfUrl}`;
-    const phone = whatsappPhone.replace(/\D/g, '');
-    const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
-    
-    window.open(whatsappUrl, '_blank');
-    setShowWhatsappModal(false);
-    setWhatsappPhone('');
-    setSelectedLead(null);
-  };
+  }, [phoneDropdown, assigningLeadId]);
 
   // Format date for display
   const formatDate = (dateString) => {
@@ -648,13 +539,16 @@ const Dashboard = () => {
                 <th>Follow-up</th>
                 <th>Remark</th>
                 {user?.role === 'Admin' && <th>Added By</th>}
+                {user?.role === 'Admin' && <th>Assigned To</th>}
+                {user?.role === 'Admin' && <th>Assigned By</th>}
+                {user?.role !== 'Admin' && <th>Assigned By</th>}
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {leads.length === 0 ? (
                 <tr>
-                  <td colSpan={user?.role === 'Admin' ? "10" : "9"} className="no-data">
+                  <td colSpan={user?.role === 'Admin' ? "12" : "10"} className="no-data">
                     No leads found. {filters.search || filters.status || filters.leadSource || filters.agent ? 'Try adjusting your filters.' : 'Add your first lead above!'}
                   </td>
                 </tr>
@@ -705,6 +599,15 @@ const Dashboard = () => {
                         {lead.createdBy ? `${lead.createdBy.name} (${lead.createdBy.role})` : '-'}
                       </td>
                     )}
+                    {user?.role === 'Admin' && (
+                      <td>{lead.assignedTo?.name || 'Unassigned'}</td>
+                    )}
+                    {user?.role === 'Admin' && (
+                      <td>{lead.assignedBy?.name || '-'}</td>
+                    )}
+                    {user?.role !== 'Admin' && (
+                      <td>{lead.assignedBy?.name || '-'}</td>
+                    )}
                     <td className="actions-cell">
                       <button className="btn-icon" onClick={() => handleEdit(lead)} title="Edit">
                         ✏️
@@ -712,46 +615,36 @@ const Dashboard = () => {
                       <button className="btn-icon btn-delete" onClick={() => handleDelete(lead._id)} title="Delete">
                         🗑️
                       </button>
-                      
-                      {/* PDF Upload/View/Share */}
-                      <div className="pdf-actions">
-                        {lead.pdfFile ? (
-                          <>
-                            <button 
-                              className="btn-icon btn-pdf" 
-                              onClick={() => handleViewPDF(lead.pdfFile)} 
-                              title="View PDF"
-                            >
-                              📄
-                            </button>
-                            <button 
-                              className="btn-icon btn-whatsapp" 
-                              onClick={() => handleWhatsAppShare(lead)} 
-                              title="Share via WhatsApp"
-                            >
-                              💬
-                            </button>
-                          </>
+                      {user?.role === 'Admin' && (
+                        assigningLeadId === lead._id ? (
+                          <select
+                            className="assign-select"
+                            defaultValue=""
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              handleAssignLead(lead._id, val === '' ? null : val);
+                            }}
+                          >
+                            <option value="" disabled>Select agent</option>
+                            <option value="">Unassign</option>
+                            {agents.map(agent => (
+                              <option key={agent._id} value={agent._id}>{agent.name}</option>
+                            ))}
+                          </select>
                         ) : (
-                          <>
-                            <input
-                              type="file"
-                              accept="application/pdf"
-                              onChange={(e) => handlePDFUpload(lead._id, e.target.files[0])}
-                              id={`pdf-${lead._id}`}
-                              style={{ display: 'none' }}
-                              disabled={uploadingPdf === lead._id}
-                            />
-                            <label 
-                              htmlFor={`pdf-${lead._id}`} 
-                              className={`btn-icon btn-upload ${uploadingPdf === lead._id ? 'uploading' : ''}`}
-                              title="Upload PDF"
-                            >
-                              {uploadingPdf === lead._id ? '⏳' : '📎'}
-                            </label>
-                          </>
-                        )}
-                      </div>
+                          <button
+                            className="btn-icon btn-assign"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setAssigningLeadId(lead._id);
+                            }}
+                            title="Assign"
+                          >
+                            👤
+                          </button>
+                        )
+                      )}
                     </td>
                   </tr>
                 ))
@@ -761,34 +654,6 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* WhatsApp Phone Number Modal */}
-      {showWhatsappModal && (
-        <div className="modal-overlay" onClick={() => setShowWhatsappModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h3>Enter WhatsApp Number</h3>
-            <p>Lead: {selectedLead?.name}</p>
-            <input
-              type="tel"
-              placeholder="Enter phone number with country code"
-              value={whatsappPhone}
-              onChange={(e) => setWhatsappPhone(e.target.value)}
-              className="modal-input"
-            />
-            <div className="modal-actions">
-              <button onClick={handleWhatsAppShareManual} className="btn-primary">
-                Share
-              </button>
-              <button onClick={() => {
-                setShowWhatsappModal(false);
-                setWhatsappPhone('');
-                setSelectedLead(null);
-              }} className="btn-secondary">
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

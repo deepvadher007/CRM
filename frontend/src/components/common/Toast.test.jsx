@@ -60,11 +60,10 @@ describe('Toast Component', () => {
   });
 
   it('should call onClose when close button is clicked', async () => {
-    const user = userEvent.setup({ delay: null });
     render(<Toast message="Test" type="info" onClose={mockOnClose} />);
     
     const closeButton = screen.getByLabelText('Close notification');
-    await user.click(closeButton);
+    userEvent.click(closeButton);
     
     expect(mockOnClose).toHaveBeenCalledTimes(1);
   });

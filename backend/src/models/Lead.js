@@ -55,8 +55,14 @@ const leadSchema = new mongoose.Schema({
   followUpDate: {
     type: Date
   },
-  pdfFile: {
-    type: String,
+  assignedTo: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
+  },
+  assignedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
     default: null
   }
 }, {

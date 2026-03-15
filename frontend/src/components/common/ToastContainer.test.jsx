@@ -41,7 +41,6 @@ describe('ToastContainer', () => {
   });
 
   it('should display success toast when success method is called', async () => {
-    const user = userEvent.setup({ delay: null });
     render(
       <ToastProvider>
         <TestComponent />
@@ -49,14 +48,13 @@ describe('ToastContainer', () => {
     );
 
     const button = screen.getByText('Show Success');
-    await user.click(button);
+    userEvent.click(button);
 
-    expect(screen.getByText('Success message')).toBeInTheDocument();
+    expect(await screen.findByText('Success message')).toBeInTheDocument();
     expect(screen.getByRole('alert')).toHaveClass('toast-success');
   });
 
   it('should display error toast when error method is called', async () => {
-    const user = userEvent.setup({ delay: null });
     render(
       <ToastProvider>
         <TestComponent />
@@ -64,14 +62,13 @@ describe('ToastContainer', () => {
     );
 
     const button = screen.getByText('Show Error');
-    await user.click(button);
+    userEvent.click(button);
 
-    expect(screen.getByText('Error message')).toBeInTheDocument();
+    expect(await screen.findByText('Error message')).toBeInTheDocument();
     expect(screen.getByRole('alert')).toHaveClass('toast-error');
   });
 
   it('should display warning toast when warning method is called', async () => {
-    const user = userEvent.setup({ delay: null });
     render(
       <ToastProvider>
         <TestComponent />
@@ -79,14 +76,13 @@ describe('ToastContainer', () => {
     );
 
     const button = screen.getByText('Show Warning');
-    await user.click(button);
+    userEvent.click(button);
 
-    expect(screen.getByText('Warning message')).toBeInTheDocument();
+    expect(await screen.findByText('Warning message')).toBeInTheDocument();
     expect(screen.getByRole('alert')).toHaveClass('toast-warning');
   });
 
   it('should display info toast when info method is called', async () => {
-    const user = userEvent.setup({ delay: null });
     render(
       <ToastProvider>
         <TestComponent />
@@ -94,40 +90,38 @@ describe('ToastContainer', () => {
     );
 
     const button = screen.getByText('Show Info');
-    await user.click(button);
+    userEvent.click(button);
 
-    expect(screen.getByText('Info message')).toBeInTheDocument();
+    expect(await screen.findByText('Info message')).toBeInTheDocument();
     expect(screen.getByRole('alert')).toHaveClass('toast-info');
   });
 
   it('should display multiple toasts simultaneously', async () => {
-    const user = userEvent.setup({ delay: null });
     render(
       <ToastProvider>
         <TestComponent />
       </ToastProvider>
     );
 
-    await user.click(screen.getByText('Show Success'));
-    await user.click(screen.getByText('Show Error'));
+    userEvent.click(screen.getByText('Show Success'));
+    userEvent.click(screen.getByText('Show Error'));
 
-    expect(screen.getByText('Success message')).toBeInTheDocument();
-    expect(screen.getByText('Error message')).toBeInTheDocument();
+    expect(await screen.findByText('Success message')).toBeInTheDocument();
+    expect(await screen.findByText('Error message')).toBeInTheDocument();
   });
 
   it('should remove toast when close button is clicked', async () => {
-    const user = userEvent.setup({ delay: null });
     render(
       <ToastProvider>
         <TestComponent />
       </ToastProvider>
     );
 
-    await user.click(screen.getByText('Show Success'));
-    expect(screen.getByText('Success message')).toBeInTheDocument();
+    userEvent.click(screen.getByText('Show Success'));
+    expect(await screen.findByText('Success message')).toBeInTheDocument();
 
     const closeButton = screen.getByLabelText('Close notification');
-    await user.click(closeButton);
+    userEvent.click(closeButton);
 
     await waitFor(() => {
       expect(screen.queryByText('Success message')).not.toBeInTheDocument();
@@ -135,15 +129,14 @@ describe('ToastContainer', () => {
   });
 
   it('should auto-remove toast after duration', async () => {
-    const user = userEvent.setup({ delay: null });
     render(
       <ToastProvider>
         <TestComponent />
       </ToastProvider>
     );
 
-    await user.click(screen.getByText('Show Custom'));
-    expect(screen.getByText('Custom message')).toBeInTheDocument();
+    userEvent.click(screen.getByText('Show Custom'));
+    expect(await screen.findByText('Custom message')).toBeInTheDocument();
 
     jest.advanceTimersByTime(1000);
 
@@ -153,15 +146,14 @@ describe('ToastContainer', () => {
   });
 
   it('should handle custom toast with showToast method', async () => {
-    const user = userEvent.setup({ delay: null });
     render(
       <ToastProvider>
         <TestComponent />
       </ToastProvider>
     );
 
-    await user.click(screen.getByText('Show Custom'));
+    userEvent.click(screen.getByText('Show Custom'));
 
-    expect(screen.getByText('Custom message')).toBeInTheDocument();
+    expect(await screen.findByText('Custom message')).toBeInTheDocument();
   });
 });

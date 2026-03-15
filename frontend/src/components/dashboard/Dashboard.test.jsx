@@ -1,26 +1,38 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import Dashboard from './Dashboard';
 import { AuthProvider } from '../../context/AuthContext';
+import api from '../../services/api';
+
+// Mock the api module
+jest.mock('../../services/api');
 
 // Mock AuthContext with test user data
 const mockLogout = jest.fn();
-const mockUser = {
+const mockAdminUser = {
   name: 'John Doe',
   email: 'john@example.com',
   role: 'Admin',
+  _id: 'admin123',
+};
+
+const mockAgentUser = {
+  name: 'Jane Smith',
+  email: 'jane@example.com',
+  role: 'Agent',
+  _id: 'agent123',
 };
 
 jest.mock('../../context/AuthContext', () => ({
   ...jest.requireActual('../../context/AuthContext'),
-  useAuth: () => ({
-    user: mockUser,
-    logout: mockLogout,
-  }),
+  useAuth: jest.fn(),
 }));
 
+const { useAuth } = require('../../context/AuthContext');
+
 // Helper function to render Dashboard with required providers
-const renderDashboard = () => {
+const renderDashboard = (user = mockAdminUser) => {
+  useAuth.mockReturnValue({ user, logout: mockLogout });
   return render(
     <BrowserRouter>
       <AuthProvider>
@@ -33,77 +45,205 @@ const renderDashboard = () => {
 describe('Dashboard Component', () => {
   beforeEach(() => {
     mockLogout.mockClear();
+    // Default mock for api calls
+    api.get.mockResolvedValue({ data: { leads: [], agents: [] } });
   });
 
-  test('renders dashboard correctly', () => {
-    renderDashboard();
-    
-    expect(screen.getByText(/Welcome back, John Doe!/i)).toBeInTheDocument();
-    expect(screen.getByText(/Here's what's happening with your CRM today/i)).toBeInTheDocument();
+  afterEach(() => {
+    jest.clearAllMocks();
   });
 
-  test('displays user profile information', () => {
+  test('renders dashboard header with user info', () => {
     renderDashboard();
-    
-    // Check for profile section
-    expect(screen.getByText('Your Profile')).toBeInTheDocument();
-    
-    // Check for user name
-    expect(screen.getByText('Name')).toBeInTheDocument();
-    expect(screen.getByText('John Doe')).toBeInTheDocument();
-    
-    // Check for user email
-    expect(screen.getByText('Email')).toBeInTheDocument();
-    expect(screen.getByText('john@example.com')).toBeInTheDocument();
-    
-    // Check for user role
-    expect(screen.getByText('Role')).toBeInTheDocument();
-    expect(screen.getByText('Admin')).toBeInTheDocument();
+    expect(screen.getByText('Hanuvansh CRM')).toBeInTheDocument();
+    expect(screen.getByText(/Welcome,/)).toBeInTheDocument();
+    expect(screen.getByText(/John Doe/)).toBeInTheDocument();
   });
 
-  test('displays logout button', () => {
+  test('renders lead form', () => {
     renderDashboard();
-    
-    const logoutButton = screen.getByRole('button', { name: /logout/i });
-    expect(logoutButton).toBeInTheDocument();
+    expect(screen.getByText('Add New Lead')).toBeInTheDocument();
+    expect(screen.getByLabelText('Name *')).toBeInTheDocument();
+    expect(screen.getByLabelText('Number *')).toBeInTheDocument();
   });
 
-  test('calls logout function when logout button is clicked', () => {
-    renderDashboard();
-    
-    const logoutButton = screen.getByRole('button', { name: /logout/i });
-    fireEvent.click(logoutButton);
-    
-    expect(mockLogout).toHaveBeenCalledTimes(1);
+  test('Admin sees "Assigned To" table header', () => {
+    renderDashboard(mockAdminUser);
+    expect(screen.getByText('Assigned To')).toBeInTheDocument();
   });
 
-  test('displays CRM feature placeholders', () => {
-    renderDashboard();
-    
-    // Check for all feature cards
-    expect(screen.getByText('Analytics')).toBeInTheDocument();
-    expect(screen.getByText('Contacts')).toBeInTheDocument();
-    expect(screen.getByText('Deals')).toBeInTheDocument();
-    expect(screen.getByText('Calendar')).toBeInTheDocument();
-    expect(screen.getByText('Email')).toBeInTheDocument();
-    expect(screen.getByText('Reports')).toBeInTheDocument();
+  test('Agent does not see "Assigned To" table header', () => {
+    renderDashboard(mockAgentUser);
+    expect(screen.queryByText('Assigned To')).not.toBeInTheDocument();
   });
 
-  test('displays "Coming Soon" badges on feature cards', () => {
-    renderDashboard();
-    
-    const comingSoonBadges = screen.getAllByText('Coming Soon');
-    expect(comingSoonBadges).toHaveLength(6);
+  test('Admin sees "Assign" button when leads are present', async () => {
+    api.get.mockImplementation((url) => {
+      if (url.includes('/api/leads')) {
+        return Promise.resolve({
+          data: {
+            leads: [
+              {
+                _id: 'lead1',
+                name: 'Test Lead',
+                number: '1234567890',
+                status: 'CNR',
+                leadSource: 'Own User',
+                date: new Date().toISOString(),
+                createdBy: { name: 'Admin', role: 'Admin' },
+                assignedTo: null,
+              },
+            ],
+          },
+        });
+      }
+      return Promise.resolve({ data: { agents: [], leads: [] } });
+    });
+
+    renderDashboard(mockAdminUser);
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Test Lead').length).toBeGreaterThanOrEqual(1);
+    });
+
+    expect(screen.getByTitle('Assign')).toBeInTheDocument();
   });
 
-  test('displays feature descriptions', () => {
-    renderDashboard();
-    
-    expect(screen.getByText(/View your sales performance and key metrics/i)).toBeInTheDocument();
-    expect(screen.getByText(/Manage your customer relationships and contacts/i)).toBeInTheDocument();
-    expect(screen.getByText(/Track your sales pipeline and close deals faster/i)).toBeInTheDocument();
-    expect(screen.getByText(/Schedule meetings and manage your appointments/i)).toBeInTheDocument();
-    expect(screen.getByText(/Send and track email campaigns to your contacts/i)).toBeInTheDocument();
-    expect(screen.getByText(/Generate detailed reports and insights/i)).toBeInTheDocument();
+  test('Agent does not see "Assign" button', async () => {
+    api.get.mockImplementation((url) => {
+      if (url.includes('/api/leads')) {
+        return Promise.resolve({
+          data: {
+            leads: [
+              {
+                _id: 'lead1',
+                name: 'Test Lead',
+                number: '1234567890',
+                status: 'CNR',
+                leadSource: 'Own User',
+                date: new Date().toISOString(),
+                createdBy: { name: 'Agent', role: 'Agent' },
+                assignedTo: null,
+              },
+            ],
+          },
+        });
+      }
+      return Promise.resolve({ data: { agents: [], leads: [] } });
+    });
+
+    renderDashboard(mockAgentUser);
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Test Lead').length).toBeGreaterThanOrEqual(1);
+    });
+
+    expect(screen.queryByTitle('Assign')).not.toBeInTheDocument();
+  });
+
+  test('unassigned lead shows "Unassigned" in Assigned To column', async () => {
+    api.get.mockImplementation((url) => {
+      if (url.includes('/api/leads')) {
+        return Promise.resolve({
+          data: {
+            leads: [
+              {
+                _id: 'lead1',
+                name: 'Test Lead',
+                number: '1234567890',
+                status: 'CNR',
+                leadSource: 'Own User',
+                date: new Date().toISOString(),
+                createdBy: { name: 'Admin', role: 'Admin' },
+                assignedTo: null,
+              },
+            ],
+          },
+        });
+      }
+      return Promise.resolve({ data: { agents: [], leads: [] } });
+    });
+
+    renderDashboard(mockAdminUser);
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Test Lead').length).toBeGreaterThanOrEqual(1);
+    });
+
+    expect(screen.getByText('Unassigned')).toBeInTheDocument();
+  });
+
+  test('assigned lead shows agent name in Assigned To column', async () => {
+    api.get.mockImplementation((url) => {
+      if (url.includes('/api/leads')) {
+        return Promise.resolve({
+          data: {
+            leads: [
+              {
+                _id: 'lead1',
+                name: 'Test Lead',
+                number: '1234567890',
+                status: 'CNR',
+                leadSource: 'Own User',
+                date: new Date().toISOString(),
+                createdBy: { name: 'Admin', role: 'Admin' },
+                assignedTo: { name: 'Jane Smith' },
+              },
+            ],
+          },
+        });
+      }
+      return Promise.resolve({ data: { agents: [], leads: [] } });
+    });
+
+    renderDashboard(mockAdminUser);
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Test Lead').length).toBeGreaterThanOrEqual(1);
+    });
+
+    expect(screen.getByText('Jane Smith')).toBeInTheDocument();
+  });
+
+  test('clicking Assign button shows agent dropdown', async () => {
+    api.get.mockImplementation((url) => {
+      if (url.includes('/api/auth/agents')) {
+        return Promise.resolve({
+          data: { agents: [{ _id: 'agent1', name: 'Agent One' }] },
+        });
+      }
+      if (url.includes('/api/leads')) {
+        return Promise.resolve({
+          data: {
+            leads: [
+              {
+                _id: 'lead1',
+                name: 'Test Lead',
+                number: '1234567890',
+                status: 'CNR',
+                leadSource: 'Own User',
+                date: new Date().toISOString(),
+                createdBy: { name: 'Admin', role: 'Admin' },
+                assignedTo: null,
+              },
+            ],
+          },
+        });
+      }
+      return Promise.resolve({ data: { leads: [] } });
+    });
+
+    renderDashboard(mockAdminUser);
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Test Lead').length).toBeGreaterThanOrEqual(1);
+    });
+
+    const assignButton = screen.getByTitle('Assign');
+    fireEvent.click(assignButton);
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Agent One').length).toBeGreaterThanOrEqual(1);
+    });
   });
 });

@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const { validationResult } = require('express-validator');
 const Lead = require('../models/Lead');
 
@@ -72,7 +73,11 @@ const getAllLeads = async (req, res, next) => {
     
     // Role-based filtering
     if (req.user.role !== 'Admin') {
-      query.user = req.user.userId;
+      // Agent sees leads they created OR leads assigned to them
+      query.$or = [
+        { createdBy: req.user.userId },
+        { assignedTo: req.user.userId }
+      ];
     } else if (agent) {
       // Admin can filter by agent
       query.user = agent;
@@ -101,10 +106,14 @@ const getAllLeads = async (req, res, next) => {
       // Admin sees all leads with creator information
       leads = await Lead.find(query)
         .populate('createdBy', 'name role')
+        .populate('assignedTo', 'name')
+        .populate('assignedBy', 'name')
         .sort({ date: -1 });
     } else {
-      // Agent sees only their own leads
-      leads = await Lead.find(query).sort({ date: -1 });
+      // Agent sees only leads assigned to them
+      leads = await Lead.find(query)
+        .populate('assignedBy', 'name')
+        .sort({ date: -1 });
     }
 
     res.status(200).json({
@@ -142,7 +151,10 @@ const updateLead = async (req, res, next) => {
     if (req.user.role === 'Admin') {
       lead = await Lead.findById(id);
     } else {
-      lead = await Lead.findOne({ _id: id, user: req.user.userId });
+      lead = await Lead.findOne({
+        _id: id,
+        $or: [{ createdBy: req.user.userId }, { assignedTo: req.user.userId }]
+      });
     }
 
     if (!lead) {
@@ -189,7 +201,10 @@ const deleteLead = async (req, res, next) => {
     if (req.user.role === 'Admin') {
       lead = await Lead.findByIdAndDelete(id);
     } else {
-      lead = await Lead.findOneAndDelete({ _id: id, user: req.user.userId });
+      lead = await Lead.findOneAndDelete({
+        _id: id,
+        $or: [{ createdBy: req.user.userId }, { assignedTo: req.user.userId }]
+      });
     }
 
     if (!lead) {
@@ -227,7 +242,10 @@ const getTodayFollowUps = async (req, res, next) => {
     
     // Role-based filtering
     if (req.user.role !== 'Admin') {
-      query.user = req.user.userId;
+      query.$or = [
+        { createdBy: req.user.userId },
+        { assignedTo: req.user.userId }
+      ];
     }
 
     const leads = await Lead.find(query)
@@ -245,47 +263,44 @@ const getTodayFollowUps = async (req, res, next) => {
 };
 
 /**
- * Upload PDF for a lead (role-based permission check)
- * Admin: can upload PDF for any lead
- * Agent: can only upload PDF for their own leads
+ * Assign a lead to an agent (Admin only, enforced at route level)
+ * PUT /api/leads/assign/:leadId
  */
-const uploadPDF = async (req, res, next) => {
+const assignLead = async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const { leadId } = req.params;
 
-    if (!req.file) {
+    if (!('agentId' in req.body)) {
       return res.status(400).json({
         success: false,
-        message: 'No PDF file uploaded',
-        statusCode: 400
+        message: 'agentId is required in request body'
       });
     }
 
-    // Find lead with role-based filtering
-    let lead;
-    if (req.user.role === 'Admin') {
-      lead = await Lead.findById(id);
-    } else {
-      lead = await Lead.findOne({ _id: id, user: req.user.userId });
+    if (!mongoose.isValidObjectId(leadId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid lead ID'
+      });
     }
+
+    const lead = await Lead.findById(leadId);
 
     if (!lead) {
       return res.status(404).json({
         success: false,
-        message: 'Lead not found or you do not have permission to upload PDF',
-        statusCode: 404
+        message: 'Lead not found'
       });
     }
 
-    // Save PDF filename only (not full path)
-    lead.pdfFile = req.file.filename;
+    lead.assignedTo = req.body.agentId;
+    lead.assignedBy = req.body.agentId ? req.user.userId : null;
     await lead.save();
 
     res.status(200).json({
       success: true,
-      message: 'PDF uploaded successfully',
-      pdfFile: req.file.filename,
-      pdfUrl: `${process.env.BACKEND_URL || 'http://localhost:5000'}/uploads/${req.file.filename}`
+      message: 'Lead assigned successfully',
+      lead
     });
   } catch (error) {
     next(error);
@@ -298,5 +313,5 @@ module.exports = {
   updateLead,
   deleteLead,
   getTodayFollowUps,
-  uploadPDF
+  assignLead
 };
