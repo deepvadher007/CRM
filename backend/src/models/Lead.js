@@ -64,6 +64,41 @@ const leadSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     default: null
+  },
+  serviceType: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  propertyType: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  locality: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  configuration: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  price: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  buildingName: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  address: {
+    type: String,
+    trim: true,
+    default: ''
   }
 }, {
   timestamps: true

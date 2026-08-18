@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import { extractErrorMessage } from '../../utils/errorHandler';
+import ImportLeadsModal from './ImportLeadsModal';
 import './Dashboard.css';
 
 const Dashboard = () => {
@@ -30,6 +31,7 @@ const Dashboard = () => {
   const [editingId, setEditingId] = useState(null);
   const [phoneDropdown, setPhoneDropdown] = useState(null);
   const [assigningLeadId, setAssigningLeadId] = useState(null);
+  const [showImportModal, setShowImportModal] = useState(false);
   
   // Filter state
   const [filters, setFilters] = useState({
@@ -276,6 +278,11 @@ const Dashboard = () => {
         <h1>Hanuvansh CRM</h1>
         <div className="header-actions">
           <p>Welcome, {user?.name} ({user?.role})</p>
+          {user?.role === 'Admin' && (
+            <button className="btn btn-primary" onClick={() => setShowImportModal(true)}>
+              Import Leads
+            </button>
+          )}
         </div>
       </div>
 
@@ -654,6 +661,11 @@ const Dashboard = () => {
         </div>
       </div>
 
+      <ImportLeadsModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onImportComplete={() => fetchLeads()}
+      />
     </div>
   );
 };

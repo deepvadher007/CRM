@@ -3,6 +3,7 @@ const router = express.Router();
 const { verifyToken } = require('../middleware/auth');
 const { requireRole } = require('../middleware/roleAuth');
 const { leadValidation } = require('../utils/validators');
+const { upload } = require('../config/uploadConfig');
 const {
   createLead,
   getAllLeads,
@@ -11,6 +12,7 @@ const {
   getTodayFollowUps,
   assignLead
 } = require('../controllers/leadController');
+const { importLeads } = require('../controllers/importController');
 
 // All lead routes require authentication
 router.use(verifyToken);
@@ -20,6 +22,9 @@ router.get('/today', getTodayFollowUps);
 
 // PUT /api/leads/assign/:leadId - Assign lead to agent (Admin only, must be before /:id route)
 router.put('/assign/:leadId', requireRole('Admin'), assignLead);
+
+// POST /api/leads/import - Bulk import leads from Excel (Admin only)
+router.post('/import', requireRole('Admin'), upload.single('file'), importLeads);
 
 // POST /api/leads - Create new lead
 router.post('/', leadValidation, createLead);

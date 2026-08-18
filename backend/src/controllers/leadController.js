@@ -94,11 +94,22 @@ const getAllLeads = async (req, res, next) => {
     }
     
     // Search by name or phone (case insensitive)
+    // Use $and to combine with existing $or (role-based filter)
     if (search) {
-      query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { number: { $regex: search, $options: 'i' } }
-      ];
+      const searchCondition = {
+        $or: [
+          { name: { $regex: search, $options: 'i' } },
+          { number: { $regex: search, $options: 'i' } }
+        ]
+      };
+      if (query.$or) {
+        // Agent already has a role-based $or, use $and to combine
+        query.$and = [{ $or: query.$or }, searchCondition];
+        delete query.$or;
+      } else {
+        // Admin: just set $or directly
+        query.$or = searchCondition.$or;
+      }
     }
     
     let leads;
