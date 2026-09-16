@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
@@ -255,10 +256,171 @@ const getAllAgents = async (req, res, next) => {
   }
 };
 
+// @desc    List agents managed via the CRM (Admin only)
+// @route   GET /api/auth/manage/agents
+// @access  Private (Admin only)
+// Returns only users with role 'Agent'. Never returns passwords or other Admins.
+const listManagedAgents = async (req, res, next) => {
+  try {
+    const agents = await User.find({ role: 'Agent' })
+      .select('_id name email phone role createdAt')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: agents.length,
+      agents
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Create a new Agent (Admin only)
+// @route   POST /api/auth/manage/agents
+// @access  Private (Admin only)
+// Role is always forced to 'Agent' regardless of any role sent in the body,
+// so an Admin can never create another Admin through this endpoint.
+const createAgent = async (req, res, next) => {
+  try {
+    // Check for validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array().map(err => err.msg)
+      });
+    }
+
+    const { name, email, phone, password, confirmPassword } = req.body;
+
+    // Confirm password must match (defense in depth; also validated in validator)
+    if (password !== confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: ['Passwords do not match']
+      });
+    }
+
+    // Enforce email uniqueness when an email is provided
+    if (email) {
+      const existingEmail = await User.findOne({ email: email.toLowerCase() });
+      if (existingEmail) {
+        return res.status(409).json({
+          success: false,
+          message: 'A user with this email already exists'
+        });
+      }
+    }
+
+    // Enforce phone uniqueness (existing rule: unique countryCode + number)
+    const existingPhone = await User.findOne({
+      'phone.countryCode': phone.countryCode,
+      'phone.number': phone.number
+    });
+    if (existingPhone) {
+      return res.status(409).json({
+        success: false,
+        message: 'A user with this phone number already exists'
+      });
+    }
+
+    // Create the agent. Role is forced to 'Agent'.
+    // Password is hashed by the existing User pre-save hook (bcryptjs).
+    const agent = await User.create({
+      name,
+      email: email || undefined,
+      phone,
+      password,
+      role: 'Agent'
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Agent created successfully',
+      agent: {
+        _id: agent._id,
+        name: agent.name,
+        email: agent.email,
+        phone: agent.phone,
+        role: agent.role,
+        createdAt: agent.createdAt
+      }
+    });
+  } catch (error) {
+    // Handle duplicate key errors from the unique indexes gracefully
+    if (error && error.code === 11000) {
+      return res.status(409).json({
+        success: false,
+        message: 'A user with these details already exists'
+      });
+    }
+    next(error);
+  }
+};
+
+// @desc    Delete an Agent (Admin only)
+// @route   DELETE /api/auth/manage/agents/:id
+// @access  Private (Admin only)
+// Safety: only deletes the User document. Leads created by, owned by, or
+// assigned to the agent are intentionally left intact for the Admin to manage.
+const deleteAgent = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid agent ID'
+      });
+    }
+
+    // Prevent an Admin from deleting themselves through this feature
+    if (String(id) === String(req.user.userId)) {
+      return res.status(403).json({
+        success: false,
+        message: 'You cannot delete your own account'
+      });
+    }
+
+    const user = await User.findById(id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Agent not found'
+      });
+    }
+
+    // An Admin must not be able to delete another Admin through this feature
+    if (user.role !== 'Agent') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only Agent accounts can be deleted here'
+      });
+    }
+
+    // Delete ONLY the user document. Leads remain untouched in the database.
+    await User.findByIdAndDelete(id);
+
+    res.status(200).json({
+      success: true,
+      message: 'Agent deleted successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   register,
   login,
   getProfile,
   changePassword,
-  getAllAgents
+  getAllAgents,
+  listManagedAgents,
+  createAgent,
+  deleteAgent
 };

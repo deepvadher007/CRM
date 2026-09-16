@@ -1,0 +1,183 @@
+/* Manage Agents modal - a large dashboard-style dialog.
+   Builds on the shared modal styles from Navbar.css (backdrop, centering,
+   padding, colors, buttons, vertical scroll). Here we widen it, lay the
+   Create Agent form into columns, and keep the Existing Agents table readable
+   at full width without a horizontal scrollbar. box-sizing: border-box is set
+   globally in App.css, so padding is already included in width. */
+
+/* Outer popup width. Use a compound selector (.modal-content.manage-agents-modal)
+   so this reliably overrides the shared `.modal-content { max-width: 400px; width: 90% }`
+   in Navbar.css regardless of stylesheet load order. This is the ONLY element that
+   controls the visible white popup width. */
+.modal-content.manage-agents-modal {
+  width: 90vw;
+  max-width: 1400px;
+  /* Keep the existing height behaviour (shared .modal-content sets max-height: 90vh
+     and overflow-y: auto); restate max-height so it isn't affected by order. */
+  max-height: 90vh;
+  /* Let the container shrink instead of being forced wider by a child. */
+  min-width: 0;
+}
+
+.manage-agents-modal h4 {
+  margin: 0 0 1rem;
+  font-size: 1.05rem;
+  color: var(--text-color, #333);
+}
+
+/* ----------------------------- Create form ----------------------------- */
+
+.manage-agents-form {
+  border-bottom: 1px solid var(--border-color, #e0e0e0);
+  padding-bottom: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+/* Two-column form on desktop/tablet. The heading, messages and the actions
+   row span the full width; the field blocks flow into two columns. */
+.manage-agents-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 1.25rem;
+  align-items: start;
+}
+
+.manage-agents-form > h4,
+.manage-agents-form > .error-message,
+.manage-agents-form > .success-message,
+.manage-agents-form > .modal-actions {
+  grid-column: 1 / -1;
+}
+
+.manage-agents-form .modal-actions {
+  margin-top: 0.25rem;
+}
+
+/* Country code + phone stay side by side within a single grid cell. */
+.form-row-inline {
+  display: flex;
+  gap: 1rem;
+}
+
+.country-code-group {
+  flex: 0 0 110px;
+}
+
+.phone-number-group {
+  flex: 1;
+}
+
+/* ----------------------------- Agent list ----------------------------- */
+
+.manage-agents-list h4 {
+  margin-top: 0;
+}
+
+.agents-loading,
+.agents-empty {
+  color: var(--text-muted, #777);
+  font-size: 0.95rem;
+  padding: 0.5rem 0;
+}
+
+.agents-table-wrapper {
+  /* Stay within the modal. On normal desktop widths the fixed-layout table
+     fits with no scrolling; on very narrow screens only this wrapper may
+     scroll horizontally, never the whole modal. */
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.agents-table {
+  width: 100%;
+  /* Fixed layout so columns follow the percentage widths below and honour the
+     modal width instead of stretching to the longest email. */
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.agents-table th,
+.agents-table td {
+  text-align: left;
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--border-color, #eee);
+  vertical-align: middle;
+  /* Wrap long values at word boundaries; only break within a word when there
+     is genuinely no other option (e.g. a very long unbroken email). */
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.agents-table th {
+  color: var(--text-muted, #666);
+  font-weight: 600;
+}
+
+/* Column widths: Name 15 / Email 30 / Phone 18 / Role 12 / Created 15 / Actions 10 */
+.agents-table th:nth-child(1), .agents-table td:nth-child(1) { width: 15%; }
+.agents-table th:nth-child(2), .agents-table td:nth-child(2) { width: 30%; }
+.agents-table th:nth-child(3), .agents-table td:nth-child(3) { width: 18%; }
+.agents-table th:nth-child(4), .agents-table td:nth-child(4) { width: 12%; }
+.agents-table th:nth-child(5), .agents-table td:nth-child(5) { width: 15%; }
+.agents-table th:nth-child(6), .agents-table td:nth-child(6) { width: 10%; }
+
+.btn-delete-agent {
+  background-color: #e53935;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 0.4rem 0.75rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  transition: background-color 0.2s ease;
+}
+
+.btn-delete-agent:hover:not(:disabled) {
+  background-color: #c62828;
+}
+
+.btn-delete-agent:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Support multiple stacked messages inside the shared error box */
+.manage-agents-modal .error-message > div {
+  margin-bottom: 0.25rem;
+}
+
+.manage-agents-modal .error-message > div:last-child {
+  margin-bottom: 0;
+}
+
+/* ------------------------------ Tablet ------------------------------ */
+@media (max-width: 900px) {
+  .modal-content.manage-agents-modal {
+    width: 92vw;
+  }
+}
+
+/* ------------------------------ Mobile ------------------------------ */
+@media (max-width: 600px) {
+  .modal-content.manage-agents-modal {
+    width: 95vw;
+  }
+
+  /* Form collapses to a single column. */
+  .manage-agents-form {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .form-row-inline {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .country-code-group {
+    flex: 1;
+  }
+}

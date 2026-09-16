@@ -8,9 +8,19 @@
  */
 
 const express = require('express');
-const { register, login, getProfile, changePassword, getAllAgents } = require('../controllers/authController');
-const { registerValidation, loginValidation } = require('../utils/validators');
+const {
+  register,
+  login,
+  getProfile,
+  changePassword,
+  getAllAgents,
+  listManagedAgents,
+  createAgent,
+  deleteAgent
+} = require('../controllers/authController');
+const { registerValidation, loginValidation, createAgentValidation } = require('../utils/validators');
 const { verifyToken } = require('../middleware/auth');
+const { requireRole } = require('../middleware/roleAuth');
 
 const router = express.Router();
 
@@ -101,5 +111,34 @@ router.put('/change-password', verifyToken, changePassword);
  * @returns {403} Forbidden (not admin)
  */
 router.get('/agents', verifyToken, getAllAgents);
+
+/**
+ * Manage Agents (Admin only)
+ *
+ * These endpoints power the Admin-only "Manage Agents" feature. They are kept
+ * separate from GET /agents (used for lead assignment) so existing behaviour is
+ * unchanged. All routes require a valid JWT and the Admin role.
+ */
+
+/**
+ * @route   GET /api/auth/manage/agents
+ * @desc    List all Agent accounts (no passwords)
+ * @access  Private (Admin only)
+ */
+router.get('/manage/agents', verifyToken, requireRole('Admin'), listManagedAgents);
+
+/**
+ * @route   POST /api/auth/manage/agents
+ * @desc    Create a new Agent (role forced to 'Agent')
+ * @access  Private (Admin only)
+ */
+router.post('/manage/agents', verifyToken, requireRole('Admin'), createAgentValidation, createAgent);
+
+/**
+ * @route   DELETE /api/auth/manage/agents/:id
+ * @desc    Delete an Agent (leads are preserved)
+ * @access  Private (Admin only)
+ */
+router.delete('/manage/agents/:id', verifyToken, requireRole('Admin'), deleteAgent);
 
 module.exports = router;

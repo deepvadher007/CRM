@@ -101,6 +101,64 @@ const registerValidation = [
 ];
 
 /**
+ * Validation schema for Admin creating an Agent (Manage Agents feature)
+ * Validates: name, phone (countryCode + number), email, password, confirmPassword
+ * Reuses the same phone/email/password rules as registration.
+ * Role is NOT accepted here; the controller always forces role = 'Agent'.
+ */
+const createAgentValidation = [
+  body('name')
+    .trim()
+    .notEmpty()
+    .withMessage('Name is required')
+    .isLength({ min: 2 })
+    .withMessage('Name must be at least 2 characters long')
+    .custom(rejectSQLInjection)
+    .customSanitizer(sanitizeInput),
+
+  body('phone.countryCode')
+    .trim()
+    .notEmpty()
+    .withMessage('Country code is required')
+    .matches(/^\+\d{1,4}$/)
+    .withMessage('Country code must start with + and contain 1-4 digits'),
+
+  body('phone.number')
+    .trim()
+    .notEmpty()
+    .withMessage('Phone number is required')
+    .matches(/^\d{10,15}$/)
+    .withMessage('Phone number must be 10-15 digits')
+    .custom(rejectSQLInjection),
+
+  body('email')
+    .trim()
+    .notEmpty()
+    .withMessage('Email is required')
+    .isEmail()
+    .withMessage('Please provide a valid email address')
+    .normalizeEmail()
+    .custom(rejectSQLInjection),
+
+  body('password')
+    .notEmpty()
+    .withMessage('Password is required')
+    .isLength({ min: 8 })
+    .withMessage('Password must be at least 8 characters long')
+    .custom(rejectSQLInjection),
+
+  body('confirmPassword')
+    .notEmpty()
+    .withMessage('Please confirm the password')
+    .custom((value, { req }) => {
+      if (value !== req.body.password) {
+        throw new Error('Passwords do not match');
+      }
+      return true;
+    })
+];
+
+/**
  * Validation schema for user login
  * Validates: identifier (email or phone), password
  * Includes sanitization for XSS and SQL injection protection
@@ -160,6 +218,7 @@ const leadValidation = [
 
 module.exports = {
   registerValidation,
+  createAgentValidation,
   loginValidation,
   leadValidation,
   sanitizeInput,

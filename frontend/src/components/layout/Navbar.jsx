@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
+import ManageAgents from '../agents/ManageAgents';
 import './Navbar.css';
 
 /**
@@ -14,6 +15,7 @@ const Navbar = () => {
   const { theme, toggleTheme } = useTheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
+  const [showManageAgents, setShowManageAgents] = useState(false);
   const [passwordData, setPasswordData] = useState({
     oldPassword: '',
     newPassword: '',
@@ -114,6 +116,15 @@ const Navbar = () => {
                     <span className="user-name">{user?.name}</span>
                     <span className="user-role">{user?.role}</span>
                   </div>
+                  {user?.role === 'Admin' && (
+                    <button
+                      onClick={() => setShowManageAgents(true)}
+                      className="btn-change-password"
+                      aria-label="Manage Agents"
+                    >
+                      👥 Manage Agents
+                    </button>
+                  )}
                   <button
                     onClick={() => setShowChangePassword(true)}
                     className="btn-change-password"
@@ -193,6 +204,20 @@ const Navbar = () => {
               <span className="user-role">{user?.role}</span>
             </div>
 
+            {/* Manage Agents Button (Admin only) */}
+            {user?.role === 'Admin' && (
+              <button
+                onClick={() => {
+                  setShowManageAgents(true);
+                  setMobileMenuOpen(false);
+                }}
+                className="mobile-btn-change-password"
+                aria-label="Manage Agents"
+              >
+                👥 Manage Agents
+              </button>
+            )}
+
             {/* Change Password Button */}
             <button
               onClick={() => {
@@ -234,6 +259,12 @@ const Navbar = () => {
           </>
         )}
       </div>
+
+      {/* Manage Agents Modal (Admin only) */}
+      <ManageAgents
+        isOpen={showManageAgents}
+        onClose={() => setShowManageAgents(false)}
+      />
 
       {/* Change Password Modal */}
       {showChangePassword && (

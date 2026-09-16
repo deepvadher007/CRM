@@ -70,12 +70,21 @@ const Dashboard = () => {
     }
   };
 
-  // Fetch agents (Admin only)
+  // Fetch agents (Admin only). Always sourced live from the API, then
+  // de-duplicated by unique _id so a stale/duplicate entry can never render.
   const fetchAgents = async () => {
     if (user?.role === 'Admin') {
       try {
         const response = await api.get('/api/auth/agents');
-        setAgents(response.data.agents || []);
+        const list = response.data.agents || [];
+        // De-duplicate by unique database id (identity is _id, not name/email)
+        const byId = new Map();
+        list.forEach((a) => {
+          if (a && a._id && !byId.has(a._id)) {
+            byId.set(a._id, a);
+          }
+        });
+        setAgents(Array.from(byId.values()));
       } catch (err) {
         console.error('Failed to fetch agents:', err);
       }
@@ -95,6 +104,16 @@ const Dashboard = () => {
     fetchLeads();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters]);
+
+  // Keep the agent list current after changes made elsewhere (e.g. an agent
+  // deleted/created via Manage Agents). Re-fetch when the tab regains focus so
+  // no browser restart is needed.
+  useEffect(() => {
+    const refreshAgentsOnFocus = () => fetchAgents();
+    window.addEventListener('focus', refreshAgentsOnFocus);
+    return () => window.removeEventListener('focus', refreshAgentsOnFocus);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   // Handle form input changes
   const handleChange = (e) => {
@@ -644,6 +663,9 @@ const Dashboard = () => {
                             className="btn-icon btn-assign"
                             onClick={(e) => {
                               e.stopPropagation();
+                              // Refresh the agent list from the API right before
+                              // opening the dropdown so deleted agents never show.
+                              fetchAgents();
                               setAssigningLeadId(lead._id);
                             }}
                             title="Assign"
