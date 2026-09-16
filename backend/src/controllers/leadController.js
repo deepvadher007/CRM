@@ -17,7 +17,10 @@ const createLead = async (req, res, next) => {
       });
     }
 
-    const { date, name, number, leadFrom, leadSource, remark, status, followUpDate } = req.body;
+    const {
+      date, name, number, leadFrom, leadSource, remark, status, followUpDate,
+      requirement, budget, stage, lastContacted, temperature
+    } = req.body;
 
     // Check for duplicate phone number
     const duplicatePhone = await Lead.findOne({ number });
@@ -42,7 +45,13 @@ const createLead = async (req, res, next) => {
       leadSource: leadSource || 'Own User',
       remark,
       status: status || 'CNR',
-      followUpDate
+      followUpDate,
+      // New real-estate fields (optional; default to empty/null when omitted)
+      requirement: requirement || '',
+      budget: budget || '',
+      stage: stage || '',
+      lastContacted: lastContacted || null,
+      temperature: temperature || ''
     });
 
     await lead.save();
@@ -66,7 +75,7 @@ const createLead = async (req, res, next) => {
  */
 const getAllLeads = async (req, res, next) => {
   try {
-    const { status, leadSource, agent, search } = req.query;
+    const { status, leadSource, agent, search, stage, temperature } = req.query;
     
     // Build base query
     let query = {};
@@ -91,6 +100,16 @@ const getAllLeads = async (req, res, next) => {
     // Lead source filter
     if (leadSource) {
       query.leadSource = leadSource;
+    }
+
+    // Stage filter (new)
+    if (stage) {
+      query.stage = stage;
+    }
+
+    // Temperature filter (new)
+    if (temperature) {
+      query.temperature = temperature;
     }
     
     // Search by name or phone (case insensitive)
@@ -155,7 +174,10 @@ const updateLead = async (req, res, next) => {
     }
 
     const { id } = req.params;
-    const { date, name, number, leadFrom, leadSource, remark, status, followUpDate } = req.body;
+    const {
+      date, name, number, leadFrom, leadSource, remark, status, followUpDate,
+      requirement, budget, stage, lastContacted, temperature
+    } = req.body;
 
     // Find lead with role-based filtering
     let lead;
@@ -185,6 +207,14 @@ const updateLead = async (req, res, next) => {
     lead.remark = remark;
     lead.status = status;
     lead.followUpDate = followUpDate;
+
+    // Update new real-estate fields only when provided, so unrelated fields on
+    // existing leads are never accidentally overwritten with undefined.
+    if (requirement !== undefined) lead.requirement = requirement;
+    if (budget !== undefined) lead.budget = budget;
+    if (stage !== undefined) lead.stage = stage;
+    if (lastContacted !== undefined) lead.lastContacted = lastContacted || null;
+    if (temperature !== undefined) lead.temperature = temperature;
 
     await lead.save();
 

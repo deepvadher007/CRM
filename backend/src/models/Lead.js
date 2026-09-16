@@ -99,6 +99,34 @@ const leadSchema = new mongoose.Schema({
     type: String,
     trim: true,
     default: ''
+  },
+  // --- Real-estate lead fields (added; all optional & backward compatible) ---
+  requirement: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  budget: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  // Pipeline stage. Distinct from `status` (CNR/FOLLOW_UP/...). Kept as a plain
+  // string with sensible values and a default so existing leads never break.
+  stage: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  lastContacted: {
+    type: Date,
+    default: null
+  },
+  // Lead temperature: 'Hot' | 'Warm' | 'Cold' | '' (empty for legacy leads).
+  temperature: {
+    type: String,
+    trim: true,
+    default: ''
   }
 }, {
   timestamps: true

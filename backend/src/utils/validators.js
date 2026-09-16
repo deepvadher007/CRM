@@ -213,7 +213,36 @@ const leadValidation = [
   body('followUpDate')
     .optional()
     .isISO8601()
-    .withMessage('Invalid date format')
+    .withMessage('Invalid date format'),
+
+  // --- Real-estate fields (all optional, backward compatible) ---
+  body('requirement')
+    .optional()
+    .trim()
+    .custom(rejectSQLInjection)
+    .customSanitizer(sanitizeInput),
+
+  body('budget')
+    .optional()
+    .trim()
+    .custom(rejectSQLInjection)
+    .customSanitizer(sanitizeInput),
+
+  body('stage')
+    .optional()
+    .trim()
+    .custom(rejectSQLInjection)
+    .customSanitizer(sanitizeInput),
+
+  body('temperature')
+    .optional({ checkFalsy: true })
+    .isIn(['Hot', 'Warm', 'Cold'])
+    .withMessage('Temperature must be Hot, Warm, or Cold'),
+
+  body('lastContacted')
+    .optional({ checkFalsy: true })
+    .isISO8601()
+    .withMessage('Invalid last contacted date format')
 ];
 
 module.exports = {

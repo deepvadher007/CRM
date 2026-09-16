@@ -17,7 +17,12 @@ const Dashboard = () => {
     leadSource: 'Own User',
     remark: '',
     status: 'CNR',
-    followUpDate: ''
+    followUpDate: '',
+    requirement: '',
+    budget: '',
+    stage: '',
+    lastContacted: '',
+    temperature: ''
   });
   
   // UI state
@@ -38,11 +43,15 @@ const Dashboard = () => {
     status: '',
     leadSource: '',
     agent: '',
-    search: ''
+    search: '',
+    stage: '',
+    temperature: ''
   });
   
   // Refs for scrolling
   const tableRef = useRef(null);
+  const tableScrollRef = useRef(null);   // the actual .table-container (overflow-x: auto)
+  const stickyScrollRef = useRef(null);  // the sticky phantom scrollbar track
 
   // Fetch all leads with filters
   const fetchLeads = async () => {
@@ -52,6 +61,8 @@ const Dashboard = () => {
       if (filters.leadSource) params.append('leadSource', filters.leadSource);
       if (filters.agent) params.append('agent', filters.agent);
       if (filters.search) params.append('search', filters.search);
+      if (filters.stage) params.append('stage', filters.stage);
+      if (filters.temperature) params.append('temperature', filters.temperature);
       
       const response = await api.get(`/api/leads?${params.toString()}`);
       setLeads(response.data.leads || []);
@@ -136,7 +147,9 @@ const Dashboard = () => {
       status: '',
       leadSource: '',
       agent: '',
-      search: ''
+      search: '',
+      stage: '',
+      temperature: ''
     });
   };
 
@@ -181,7 +194,12 @@ const Dashboard = () => {
         leadSource: 'Own User',
         remark: '',
         status: 'CNR',
-        followUpDate: ''
+        followUpDate: '',
+        requirement: '',
+        budget: '',
+        stage: '',
+        lastContacted: '',
+        temperature: ''
       });
 
       // Refresh data
@@ -205,7 +223,12 @@ const Dashboard = () => {
       leadSource: lead.leadSource || 'Own User',
       remark: lead.remark || '',
       status: lead.status,
-      followUpDate: lead.followUpDate ? new Date(lead.followUpDate).toISOString().split('T')[0] : ''
+      followUpDate: lead.followUpDate ? new Date(lead.followUpDate).toISOString().split('T')[0] : '',
+      requirement: lead.requirement || '',
+      budget: lead.budget || '',
+      stage: lead.stage || '',
+      lastContacted: lead.lastContacted ? new Date(lead.lastContacted).toISOString().split('T')[0] : '',
+      temperature: lead.temperature || ''
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -248,7 +271,12 @@ const Dashboard = () => {
       leadSource: 'Own User',
       remark: '',
       status: 'CNR',
-      followUpDate: ''
+      followUpDate: '',
+      requirement: '',
+      budget: '',
+      stage: '',
+      lastContacted: '',
+      temperature: ''
     });
     setDuplicateWarning('');
   };
@@ -274,6 +302,22 @@ const Dashboard = () => {
     return new Date(dateString).toLocaleDateString('en-IN');
   };
 
+  // Readable "5 Sep 2026" style date (used for Last Contacted)
+  const formatReadableDate = (dateString) => {
+    if (!dateString) return '-';
+    const d = new Date(dateString);
+    if (isNaN(d.getTime())) return '-';
+    return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  };
+
+  // Temperature display with an icon, reusing existing text styling
+  const renderTemperature = (temp) => {
+    if (temp === 'Hot') return '🔥 Hot';
+    if (temp === 'Warm') return '🟡 Warm';
+    if (temp === 'Cold') return '❄️ Cold';
+    return '-';
+  };
+
   // Scroll to matching lead and highlight
   const scrollToLead = (leadId) => {
     const row = document.getElementById(`lead-${leadId}`);
@@ -290,6 +334,58 @@ const Dashboard = () => {
       scrollToLead(leads[0]._id);
     }
   }, [leads, filters.search]);
+
+  // Keep the sticky scroll track width equal to the table's scrollable width.
+  // Runs whenever the leads list changes (rows added/removed = width may change).
+  useEffect(() => {
+    const tableEl = tableScrollRef.current;
+    const stickyEl = stickyScrollRef.current;
+    if (!tableEl || !stickyEl) return;
+
+    const thumbEl = stickyEl.firstChild;
+    if (thumbEl) {
+      thumbEl.style.width = tableEl.scrollWidth + 'px';
+    }
+  }, [leads]);
+
+  // Bidirectional scroll sync between the sticky scrollbar and the table.
+  // A boolean flag prevents the two listeners from triggering each other.
+  useEffect(() => {
+    const tableEl = tableScrollRef.current;
+    const stickyEl = stickyScrollRef.current;
+    if (!tableEl || !stickyEl) return;
+
+    let syncing = false;
+
+    const onStickyScroll = () => {
+      if (syncing) return;
+      syncing = true;
+      tableEl.scrollLeft = stickyEl.scrollLeft;
+      syncing = false;
+    };
+
+    const onTableScroll = () => {
+      if (syncing) return;
+      syncing = true;
+      stickyEl.scrollLeft = tableEl.scrollLeft;
+      syncing = false;
+    };
+
+    stickyEl.addEventListener('scroll', onStickyScroll);
+    tableEl.addEventListener('scroll', onTableScroll);
+
+    // Also sync thumb width on initial mount
+    const thumbEl = stickyEl.firstChild;
+    if (thumbEl) {
+      thumbEl.style.width = tableEl.scrollWidth + 'px';
+    }
+
+    return () => {
+      stickyEl.removeEventListener('scroll', onStickyScroll);
+      tableEl.removeEventListener('scroll', onTableScroll);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="dashboard-container">
@@ -435,6 +531,82 @@ const Dashboard = () => {
             </div>
           </div>
 
+          {/* Real-estate lead fields */}
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="requirement">Requirement</label>
+              <input
+                type="text"
+                id="requirement"
+                name="requirement"
+                value={formData.requirement}
+                onChange={handleChange}
+                placeholder="e.g., 4 BHK, 2 BHK, Commercial"
+                disabled={loading}
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="budget">Budget</label>
+              <input
+                type="text"
+                id="budget"
+                name="budget"
+                value={formData.budget}
+                onChange={handleChange}
+                placeholder="e.g., ₹3Cr, ₹50L"
+                disabled={loading}
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="stage">Stage</label>
+              <select
+                id="stage"
+                name="stage"
+                value={formData.stage}
+                onChange={handleChange}
+                disabled={loading}
+              >
+                <option value="">Select stage</option>
+                <option value="New">New</option>
+                <option value="Contacted">Contacted</option>
+                <option value="Site Visit">Site Visit</option>
+                <option value="Negotiation">Negotiation</option>
+                <option value="Closed">Closed</option>
+                <option value="Lost">Lost</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="lastContacted">Last Contacted</label>
+              <input
+                type="date"
+                id="lastContacted"
+                name="lastContacted"
+                value={formData.lastContacted}
+                onChange={handleChange}
+                disabled={loading}
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="temperature">Temperature</label>
+              <select
+                id="temperature"
+                name="temperature"
+                value={formData.temperature}
+                onChange={handleChange}
+                disabled={loading}
+              >
+                <option value="">Select temperature</option>
+                <option value="Hot">Hot</option>
+                <option value="Warm">Warm</option>
+                <option value="Cold">Cold</option>
+              </select>
+            </div>
+          </div>
+
           <div className="form-actions">
             <button type="submit" className="btn btn-primary" disabled={loading}>
               {loading ? 'Saving...' : editingId ? 'Update Lead' : 'Add Lead'}
@@ -522,6 +694,39 @@ const Dashboard = () => {
             </select>
           </div>
 
+          <div className="filter-group">
+            <label htmlFor="stageFilter">Stage</label>
+            <select
+              id="stageFilter"
+              name="stage"
+              value={filters.stage}
+              onChange={handleFilterChange}
+            >
+              <option value="">All Stages</option>
+              <option value="New">New</option>
+              <option value="Contacted">Contacted</option>
+              <option value="Site Visit">Site Visit</option>
+              <option value="Negotiation">Negotiation</option>
+              <option value="Closed">Closed</option>
+              <option value="Lost">Lost</option>
+            </select>
+          </div>
+
+          <div className="filter-group">
+            <label htmlFor="temperatureFilter">Temperature</label>
+            <select
+              id="temperatureFilter"
+              name="temperature"
+              value={filters.temperature}
+              onChange={handleFilterChange}
+            >
+              <option value="">All Temperatures</option>
+              <option value="Hot">Hot</option>
+              <option value="Warm">Warm</option>
+              <option value="Cold">Cold</option>
+            </select>
+          </div>
+
           {user?.role === 'Admin' && (
             <div className="filter-group">
               <label htmlFor="agentFilter">Agent</label>
@@ -552,7 +757,13 @@ const Dashboard = () => {
       {/* All Leads Table */}
       <div className="leads-table-section" ref={tableRef}>
         <h2>All Leads ({leads.length})</h2>
-        <div className="table-container">
+        {/* Sticky horizontal scrollbar — sits at bottom of visible section.
+            Its inner thumb width is kept in sync with the table's scrollWidth
+            by the useEffect above. Scrolling either element syncs the other. */}
+        <div className="sticky-scroll-track" ref={stickyScrollRef}>
+          <div className="sticky-scroll-thumb"></div>
+        </div>
+        <div className="table-container" ref={tableScrollRef}>
           <table className="leads-table">
             <thead>
               <tr>
@@ -562,6 +773,11 @@ const Dashboard = () => {
                 <th>Lead From</th>
                 <th>Lead Source</th>
                 <th>Status</th>
+                <th className="col-requirement">Requirement</th>
+                <th className="col-budget">Budget</th>
+                <th className="col-stage">Stage</th>
+                <th className="col-last-contacted">Last Contacted</th>
+                <th className="col-temperature">Temperature</th>
                 <th>Follow-up</th>
                 <th>Remark</th>
                 {user?.role === 'Admin' && <th>Added By</th>}
@@ -574,7 +790,7 @@ const Dashboard = () => {
             <tbody>
               {leads.length === 0 ? (
                 <tr>
-                  <td colSpan={user?.role === 'Admin' ? "12" : "10"} className="no-data">
+                  <td colSpan={user?.role === 'Admin' ? "17" : "15"} className="no-data">
                     No leads found. {filters.search || filters.status || filters.leadSource || filters.agent ? 'Try adjusting your filters.' : 'Add your first lead above!'}
                   </td>
                 </tr>
@@ -618,6 +834,17 @@ const Dashboard = () => {
                         {lead.status.replace('_', ' ')}
                       </span>
                     </td>
+                    <td className="col-requirement">{lead.requirement || '-'}</td>
+                    <td className="col-budget">{lead.budget || '-'}</td>
+                    <td className="col-stage">
+                      {lead.stage ? (
+                        <span className={`stage-badge stage-${lead.stage.toLowerCase().replace(/\s+/g, '-')}`}>
+                          {lead.stage}
+                        </span>
+                      ) : '-'}
+                    </td>
+                    <td className="col-last-contacted">{formatReadableDate(lead.lastContacted)}</td>
+                    <td className="col-temperature">{renderTemperature(lead.temperature)}</td>
                     <td>{formatDate(lead.followUpDate)}</td>
                     <td className="remark-cell">{lead.remark || '-'}</td>
                     {user?.role === 'Admin' && (

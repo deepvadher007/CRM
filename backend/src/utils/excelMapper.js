@@ -20,6 +20,13 @@ function mapExcelRow(row, adminUserId) {
     price: (row['Price'] || '').toString().trim(),
     buildingName: (row['Building/Project Name'] || '').toString().trim(),
     address: (row['Address'] || '').toString().trim(),
+    // Real-estate fields (optional in the sheet; default to empty/null so
+    // existing files without these columns keep importing successfully).
+    requirement: (row['Requirement'] || '').toString().trim(),
+    budget: (row['Budget'] || '').toString().trim(),
+    stage: (row['Stage'] || '').toString().trim(),
+    lastContacted: row['Last Contacted'] ? parseOptionalDate(row['Last Contacted']) : null,
+    temperature: normalizeTemperature(row['Temperature']),
     user: adminUserId,
     createdBy: adminUserId,
     assignedTo: null,
@@ -28,6 +35,36 @@ function mapExcelRow(row, adminUserId) {
     leadSource: 'Other',
     leadFrom: ''
   };
+}
+
+/**
+ * Parses an optional date. Unlike parseDate, returns null (not "now") when the
+ * value is missing or unparseable, so an absent column stays empty.
+ */
+function parseOptionalDate(raw) {
+  if (!raw) return null;
+  const str = String(raw).trim();
+  const parts = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (parts) {
+    const [, day, month, year] = parts;
+    const date = new Date(Number(year), Number(month) - 1, Number(day));
+    if (!isNaN(date.getTime())) return date;
+  }
+  const fallback = new Date(str);
+  if (!isNaN(fallback.getTime())) return fallback;
+  return null;
+}
+
+/**
+ * Normalizes a temperature cell to 'Hot' | 'Warm' | 'Cold', else '' .
+ */
+function normalizeTemperature(raw) {
+  if (!raw) return '';
+  const v = String(raw).trim().toLowerCase();
+  if (v === 'hot') return 'Hot';
+  if (v === 'warm') return 'Warm';
+  if (v === 'cold') return 'Cold';
+  return '';
 }
 
 /**
@@ -53,4 +90,4 @@ function parseDate(raw) {
   return new Date();
 }
 
-module.exports = { mapExcelRow, parseDate };
+module.exports = { mapExcelRow, parseDate, parseOptionalDate, normalizeTemperature };

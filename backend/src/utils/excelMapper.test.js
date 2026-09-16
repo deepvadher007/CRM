@@ -159,3 +159,46 @@ describe('parseDate - Unit Tests', () => {
     });
   });
 });
+
+describe('Excel Row Mapper - Real-estate fields', () => {
+  const adminUserId = '507f1f77bcf86cd799439011';
+
+  it('maps the 5 real-estate columns when present', () => {
+    const row = {
+      'Lead Name': 'Alice',
+      'Lead Phone Number': '9876543210',
+      'Requirement': '3 BHK',
+      'Budget': '₹2Cr',
+      'Stage': 'Site Visit',
+      'Last Contacted': '05/09/2026',
+      'Temperature': 'hot'
+    };
+    const mapped = mapExcelRow(row, adminUserId);
+    expect(mapped.requirement).toBe('3 BHK');
+    expect(mapped.budget).toBe('₹2Cr');
+    expect(mapped.stage).toBe('Site Visit');
+    expect(mapped.lastContacted).toBeInstanceOf(Date);
+    expect(mapped.temperature).toBe('Hot'); // normalized
+  });
+
+  it('defaults the 5 fields to empty/null when columns are absent (backward compatible)', () => {
+    const row = {
+      'Lead Name': 'Bob',
+      'Lead Phone Number': '9876500000'
+    };
+    const mapped = mapExcelRow(row, adminUserId);
+    expect(mapped.requirement).toBe('');
+    expect(mapped.budget).toBe('');
+    expect(mapped.stage).toBe('');
+    expect(mapped.lastContacted).toBeNull();
+    expect(mapped.temperature).toBe('');
+    // Existing fields still map correctly
+    expect(mapped.name).toBe('Bob');
+    expect(mapped.status).toBe('CNR');
+  });
+
+  it('normalizes invalid temperature to empty string', () => {
+    const mapped = mapExcelRow({ 'Lead Name': 'C', 'Lead Phone Number': '9', 'Temperature': 'lukewarm' }, adminUserId);
+    expect(mapped.temperature).toBe('');
+  });
+});

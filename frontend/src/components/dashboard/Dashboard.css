@@ -174,6 +174,33 @@
   border-radius: 12px;
   padding: 24px;
   box-shadow: var(--shadow-md);
+  /* Required so the sticky-scroll-track (position:sticky) is constrained
+     within this section rather than the full page height. */
+  position: relative;
+}
+
+/* Sticky horizontal scrollbar — floats at the bottom of the visible
+   portion of the leads-table-section as the user vertically scrolls. */
+.sticky-scroll-track {
+  position: sticky;
+  bottom: 0;
+  overflow-x: scroll;
+  overflow-y: hidden;
+  /* Sit above the table rows so it's never hidden by content. */
+  z-index: 10;
+  background-color: var(--bg-primary, #fff);
+  /* A subtle top border so the bar doesn't blend into the last row. */
+  border-top: 1px solid var(--border-color, #e0e0e0);
+  /* Give the scrollbar a visible height on every browser. */
+  height: 17px;
+}
+
+/* The inner thumb is a zero-height spacer whose width is set via JS to
+   match the table's scrollWidth. This is the only way to give
+   overflow-x: scroll something to actually scroll without duplicating DOM. */
+.sticky-scroll-thumb {
+  height: 1px;
+  /* Width is set dynamically by the useEffect in Dashboard.jsx */
 }
 
 .leads-table-section h2 {
@@ -326,6 +353,38 @@
   background-color: rgba(244, 67, 54, 0.1);
   color: var(--error-color);
 }
+
+/* Real-estate columns: readable minimum widths (table stays horizontally
+   scrollable via .table-container { overflow-x: auto }). */
+.leads-table th.col-requirement,
+.leads-table td.col-requirement { min-width: 140px; }
+.leads-table th.col-budget,
+.leads-table td.col-budget { min-width: 100px; }
+.leads-table th.col-stage,
+.leads-table td.col-stage { min-width: 110px; }
+.leads-table th.col-last-contacted,
+.leads-table td.col-last-contacted { min-width: 120px; white-space: nowrap; }
+.leads-table th.col-temperature,
+.leads-table td.col-temperature { min-width: 110px; white-space: nowrap; }
+
+/* Stage badge - reuses the same pill shape as status badges */
+.stage-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  background-color: rgba(158, 158, 158, 0.12);
+  color: var(--text-secondary, #555);
+  white-space: nowrap;
+}
+
+.stage-new { background-color: rgba(33, 150, 243, 0.1); color: var(--info-color); }
+.stage-contacted { background-color: rgba(255, 152, 0, 0.1); color: var(--warning-color); }
+.stage-site-visit { background-color: rgba(156, 39, 176, 0.12); color: #9c27b0; }
+.stage-negotiation { background-color: rgba(255, 193, 7, 0.15); color: #b8860b; }
+.stage-closed { background-color: rgba(76, 175, 80, 0.1); color: var(--success-color); }
+.stage-lost { background-color: rgba(244, 67, 54, 0.1); color: var(--error-color); }
 
 /* ========================================
    RESPONSIVE DESIGN
