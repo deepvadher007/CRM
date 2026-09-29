@@ -211,7 +211,7 @@ const leadValidation = [
     .withMessage('Invalid status'),
 
   body('followUpDate')
-    .optional()
+    .optional({ checkFalsy: true })
     .isISO8601()
     .withMessage('Invalid date format'),
 

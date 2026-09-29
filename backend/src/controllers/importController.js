@@ -39,7 +39,30 @@ const importLeads = async (req, res, next) => {
     }
 
     const sheetName = workbook.SheetNames[0];
-    const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+    const sheet = workbook.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json(sheet);
+
+    // Validate that the file follows the official CRM Excel format.
+    // We read the header row directly (header: 1) and trim whitespace so a file
+    // with stray spaces in headers still validates, while an unrelated file
+    // (missing the essential lead columns) is rejected with a clear message.
+    const headerMatrix = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+    const rawHeaders = Array.isArray(headerMatrix[0]) ? headerMatrix[0] : [];
+    const headers = rawHeaders.map(h => String(h == null ? '' : h).trim());
+    const requiredHeaders = ['Lead Name', 'Lead Phone Number'];
+    const missingRequired = requiredHeaders.filter(h => !headers.includes(h));
+    if (rows.length > 0 && missingRequired.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message:
+          'The uploaded file does not follow the required CRM Excel format. ' +
+          'Expected columns: Service Type, Property Type, Lead Date, Lead Name, ' +
+          'Lead Phone Number, Locality, Configuration, Price, Building/Project Name, ' +
+          'Address, Notes. ' +
+          `Missing required column(s): ${missingRequired.join(', ')}.`,
+        statusCode: 400
+      });
+    }
 
     const adminUserId = req.user.userId;
     const duplicateDetails = [];

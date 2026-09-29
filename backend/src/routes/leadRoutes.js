@@ -13,12 +13,16 @@ const {
   assignLead
 } = require('../controllers/leadController');
 const { importLeads } = require('../controllers/importController');
+const { exportLeads } = require('../controllers/exportController');
 
 // All lead routes require authentication
 router.use(verifyToken);
 
 // GET /api/leads/today - Get today's follow-ups (must be before /:id route)
 router.get('/today', getTodayFollowUps);
+
+// GET /api/leads/export - Export all leads as XLSX (Admin only, must be before /:id)
+router.get('/export', requireRole('Admin'), exportLeads);
 
 // PUT /api/leads/assign/:leadId - Assign lead to agent (Admin only, must be before /:id route)
 router.put('/assign/:leadId', requireRole('Admin'), assignLead);

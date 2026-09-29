@@ -45,7 +45,7 @@ const createLead = async (req, res, next) => {
       leadSource: leadSource || 'Own User',
       remark,
       status: status || 'CNR',
-      followUpDate,
+      followUpDate: followUpDate || null,
       // New real-estate fields (optional; default to empty/null when omitted)
       requirement: requirement || '',
       budget: budget || '',
@@ -206,7 +206,8 @@ const updateLead = async (req, res, next) => {
     lead.leadSource = leadSource;
     lead.remark = remark;
     lead.status = status;
-    lead.followUpDate = followUpDate;
+    // Follow-up date is optional. An empty string or null means "clear it".
+    lead.followUpDate = followUpDate || null;
 
     // Update new real-estate fields only when provided, so unrelated fields on
     // existing leads are never accidentally overwritten with undefined.

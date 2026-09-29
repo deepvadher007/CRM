@@ -40,16 +40,38 @@ function mapExcelRow(row, adminUserId) {
 /**
  * Parses an optional date. Unlike parseDate, returns null (not "now") when the
  * value is missing or unparseable, so an absent column stays empty.
+ * Supports the same formats as parseDate (serial numbers, DD/MM/YYYY, ISO, etc.)
  */
 function parseOptionalDate(raw) {
-  if (!raw) return null;
-  const str = String(raw).trim();
-  const parts = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
-  if (parts) {
-    const [, day, month, year] = parts;
-    const date = new Date(Number(year), Number(month) - 1, Number(day));
-    if (!isNaN(date.getTime())) return date;
+  if (!raw && raw !== 0) return null;
+
+  if (raw instanceof Date) {
+    if (isNaN(raw.getTime())) return null;
+    return utcDate(raw.getUTCFullYear(), raw.getUTCMonth(), raw.getUTCDate());
   }
+
+  if (typeof raw === 'number') {
+    if (raw >= 1 && raw <= 2958465) return excelSerialToDate(raw);
+    return null;
+  }
+
+  const str = String(raw).trim();
+  if (!str) return null;
+
+  const dmyMatch = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (dmyMatch) {
+    const [, day, month, year] = dmyMatch;
+    const d = utcDate(Number(year), Number(month) - 1, Number(day));
+    if (!isNaN(d.getTime())) return d;
+  }
+
+  const isoMatch = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) {
+    const [, year, month, day] = isoMatch;
+    const d = utcDate(Number(year), Number(month) - 1, Number(day));
+    if (!isNaN(d.getTime())) return d;
+  }
+
   const fallback = new Date(str);
   if (!isNaN(fallback.getTime())) return fallback;
   return null;
@@ -68,26 +90,108 @@ function normalizeTemperature(raw) {
 }
 
 /**
+ * Converts an Excel serial date number to a JavaScript Date.
+ *
+ * Excel stores dates as the number of days since 1900-01-00 (with a deliberate
+ * off-by-one / leap-year bug that treats 1900 as a leap year).
+ * The standard adjustment is: Unix epoch = Excel serial - 25569 days.
+ * We parse it in UTC then rebuild as a local midnight date to avoid timezone
+ * shifts changing the calendar day.
+ *
+ * @param {number} serial - Excel date serial (e.g. 46281)
+ * @returns {Date} Local-midnight Date
+ */
+const XLSX = require('xlsx');
+
+function excelSerialToDate(serial) {
+  // Use the xlsx library's own serial→date-code parser, which returns the
+  // calendar components (y/m/d) directly with no timezone math. This avoids the
+  // off-by-one errors that arise from manual epoch/timezone arithmetic and is
+  // stable regardless of the server timezone. We then build a UTC-midnight Date
+  // so the stored value is a timezone-independent, date-only representation.
+  try {
+    const parsed = XLSX.SSF && XLSX.SSF.parse_date_code
+      ? XLSX.SSF.parse_date_code(serial)
+      : null;
+    if (parsed && parsed.y) {
+      return new Date(Date.UTC(parsed.y, parsed.m - 1, parsed.d));
+    }
+  } catch (e) {
+    // fall through to manual conversion
+  }
+  // Fallback: manual conversion (25569 = days from 1900-01-01 to 1970-01-01)
+  const days = Math.round(serial - 25569);
+  const utcDate = new Date(days * 86400 * 1000);
+  return new Date(Date.UTC(utcDate.getUTCFullYear(), utcDate.getUTCMonth(), utcDate.getUTCDate()));
+}
+
+/**
+ * Builds a timezone-independent UTC-midnight Date from calendar parts.
+ * @param {number} year @param {number} monthIndex (0-based) @param {number} day
+ */
+function utcDate(year, monthIndex, day) {
+  return new Date(Date.UTC(year, monthIndex, day));
+}
+
+/**
  * Parses a date string in DD/MM/YYYY format. Returns current date on failure.
- * 
- * @param {string|number|null|undefined} raw - Raw date value from Excel
+ *
+ * Handles:
+ *  - Excel serial numbers (e.g. 46281 → 2026-07-07)
+ *  - JS Date objects (passthrough)
+ *  - DD/MM/YYYY and DD-MM-YYYY strings
+ *  - YYYY-MM-DD strings (ISO)
+ *  - Fallback: native Date parse
+ *  - Missing/falsy: returns today
+ *
+ * @param {string|number|Date|null|undefined} raw - Raw date value from Excel
  * @returns {Date} Parsed date or current date as fallback
  */
 function parseDate(raw) {
-  if (!raw) return new Date();
-  const str = String(raw).trim();
-  // Try DD/MM/YYYY or DD-MM-YYYY
-  const parts = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
-  if (parts) {
-    const [, day, month, year] = parts;
-    const date = new Date(Number(year), Number(month) - 1, Number(day));
-    if (!isNaN(date.getTime())) return date;
+  if (!raw && raw !== 0) return new Date();
+
+  // If xlsx returned a real JS Date (cellDates: true or already a Date).
+  // xlsx date cells are stored as UTC; read UTC parts to get the intended day.
+  if (raw instanceof Date) {
+    if (isNaN(raw.getTime())) return new Date();
+    return utcDate(raw.getUTCFullYear(), raw.getUTCMonth(), raw.getUTCDate());
   }
-  // Try native Date parse as fallback
+
+  // Excel serial numbers in a plausible date range (1 = 1900-01-01,
+  // ~2958465 = 9999-12-31). Pass the RAW fractional serial to excelSerialToDate
+  // so the xlsx SSF parser can resolve the correct calendar day (rounding here
+  // would shift dates whose serial carries a time-of-day fraction).
+  if (typeof raw === 'number') {
+    if (raw >= 1 && raw <= 2958465) {
+      return excelSerialToDate(raw);
+    }
+    return new Date(); // out-of-range number → fallback
+  }
+
+  const str = String(raw).trim();
+  if (!str) return new Date();
+
+  // DD/MM/YYYY or DD-MM-YYYY → UTC-midnight (timezone-independent)
+  const dmyMatch = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (dmyMatch) {
+    const [, day, month, year] = dmyMatch;
+    const d = utcDate(Number(year), Number(month) - 1, Number(day));
+    if (!isNaN(d.getTime())) return d;
+  }
+
+  // YYYY-MM-DD (ISO date-only) → UTC-midnight
+  const isoMatch = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) {
+    const [, year, month, day] = isoMatch;
+    const d = utcDate(Number(year), Number(month) - 1, Number(day));
+    if (!isNaN(d.getTime())) return d;
+  }
+
+  // Fallback: native Date parse (may timezone-shift, but better than nothing)
   const fallback = new Date(str);
   if (!isNaN(fallback.getTime())) return fallback;
-  // Default to current date
+
   return new Date();
 }
 
-module.exports = { mapExcelRow, parseDate, parseOptionalDate, normalizeTemperature };
+module.exports = { mapExcelRow, parseDate, parseOptionalDate, normalizeTemperature, excelSerialToDate };

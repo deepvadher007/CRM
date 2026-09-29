@@ -394,9 +394,38 @@ const Dashboard = () => {
         <div className="header-actions">
           <p>Welcome, {user?.name} ({user?.role})</p>
           {user?.role === 'Admin' && (
-            <button className="btn btn-primary" onClick={() => setShowImportModal(true)}>
-              Import Leads
-            </button>
+            <div className="header-admin-actions">
+              <button className="btn btn-primary" onClick={() => setShowImportModal(true)}>
+                Import Leads
+              </button>
+              <button
+                className="btn btn-secondary"
+                onClick={() => {
+                  // Trigger a direct download from the authenticated API
+                  const token = localStorage.getItem('token');
+                  const baseURL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+                  const url = `${baseURL}/api/leads/export`;
+                  // Use a hidden anchor with Authorization via fetch + blob
+                  fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+                    .then((res) => {
+                      if (!res.ok) throw new Error('Export failed');
+                      return res.blob();
+                    })
+                    .then((blob) => {
+                      const a = document.createElement('a');
+                      a.href = URL.createObjectURL(blob);
+                      a.download = 'leads_export.xlsx';
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                      URL.revokeObjectURL(a.href);
+                    })
+                    .catch(() => alert('Failed to export leads. Please try again.'));
+                }}
+              >
+                Export Leads
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -506,7 +535,7 @@ const Dashboard = () => {
             </div>
 
             <div className="form-group">
-              <label htmlFor="followUpDate">Follow-up Date</label>
+              <label htmlFor="followUpDate">Follow-up Date (Optional)</label>
               <input
                 type="date"
                 id="followUpDate"
