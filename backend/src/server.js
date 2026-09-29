@@ -34,12 +34,11 @@ const allowedOrigins = [
   'http://localhost:5000'
 ];
 
-app.use(cors({
+const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps, Postman, or same-origin)
+    // Allow requests with no origin (mobile apps, Postman, same-origin server calls)
     if (!origin) return callback(null, true);
-    
-    // Check if origin is in allowed list
+
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     } else {
@@ -47,8 +46,22 @@ app.use(cors({
       return callback(new Error('Not allowed by CORS'), false);
     }
   },
-  credentials: true
-}));
+  credentials: true,
+  // Explicitly list methods and headers so preflight responses carry the
+  // required Access-Control-Allow-Methods and Access-Control-Allow-Headers
+  // headers.  Without these, browsers block credentialed POST/PUT requests
+  // even when the origin itself is allowed.
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+
+// Handle OPTIONS preflight requests BEFORE any auth middleware or route
+// handlers.  This ensures cross-origin preflight succeeds even on protected
+// routes (e.g. POST /api/auth/login sends an Authorization-less preflight,
+// but PUT /api/leads/… sends one with Authorization in the request headers).
+app.options('*', cors(corsOptions));
+
+app.use(cors(corsOptions));
 
 // Body parsing middleware
 app.use(express.json());
